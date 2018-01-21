@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	CONN_HOST = "172.17.0.2"
+	CONN_HOST = "grepservice"
 	CONN_PORT = "3000"
 	CONN_TYPE = "tcp"
 )

@@ -2,7 +2,7 @@ version: '3'
 
 services:
   grepservice:
-    build: .
+    build: ./dockerized_go_server/.
   grepclient:
     build: ./dockerized_go_client/.
   grepclient2:
