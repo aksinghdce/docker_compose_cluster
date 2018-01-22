@@ -13,8 +13,9 @@ const (
 )
 
 func main() {
-	// Liten for incoming connections.
-	l, err := net.Listen(CONN_TYPE, CONN_HOST+":"+CONN_PORT)
+	// Liten for incoming connections. Don't need to specify an ipaddress here as per golang
+	// documentation
+	l, err := net.Listen(CONN_TYPE, ":"+CONN_PORT)
 	if err != nil {
 		fmt.Println("Error listening:", err.Error())
 		os.Exit(1)
