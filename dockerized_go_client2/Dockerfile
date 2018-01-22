@@ -2,5 +2,5 @@ FROM golang:latest
 RUN mkdir /app 
 ADD . /app/ 
 WORKDIR /app 
-RUN go build -o hello_from_client . 
-CMD ["/app/hello_from_client"]
+RUN go build -o http_client . 
+CMD ["/app/http_client"]

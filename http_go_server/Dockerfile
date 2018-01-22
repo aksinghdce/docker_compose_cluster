@@ -2,5 +2,6 @@ FROM golang:latest
 RUN mkdir /app 
 ADD . /app/ 
 WORKDIR /app 
-RUN go build -o grep_client . 
-CMD ["/app/grep_client"]
+EXPOSE 8080:8080
+RUN go build -o main . 
+CMD ["/app/main"]
