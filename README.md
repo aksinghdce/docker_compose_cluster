@@ -1,3 +1,5 @@
+Read a more dynamic document of this README : https://docs.google.com/document/d/1LneRwSc1iNG_EZPtJHI6JIRKjVAt3nt08X6PgevXOic/edit?usp=sharing
+
 # docker_compose_cluster
 A cluster of docker containers one of which is a server and rest are clients
 
