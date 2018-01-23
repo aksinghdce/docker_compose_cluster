@@ -6,17 +6,22 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"os/exec"
 )
 
 func main() {
 
+	/*
+		Launch a goroutine to act as a server for peer's grep requests
+	*/
 	/**
 	1. Launch a go routine to get local grep
 	2. Launch a go routine that uses a FanIn function to get peer grep
 	3. We have all the grep results, send it to client
 	**/
 
-	fmt.Println("Local Grep: ", localgrep("grep", "506901129", "machine2.log"))
+	lc := localGrep("grep", "506901129", "machine2.log")
+	//Get grep result from remote machines
 	v := url.Values{}
 	v.Set("ask", "grep")
 	v.Add("search", "tanuki")
@@ -37,14 +42,28 @@ func main() {
 	v3.Add("search", "3161")
 	v3.Add("file", "machine1.log")
 
-	c := remoteGrep("grepservice", v)
-	c1 := remoteGrep("grepservice1", v1)
-	c2 := remoteGrep("grepservice2", v2)
-	c3 := remoteGrep("grepservice3", v3)
-	fmt.Println("Response from server:", <-c)
-	fmt.Println("Response from server:", <-c1)
-	fmt.Println("Response from server:", <-c2)
-	fmt.Println("Response from server:", <-c3)
+	c := remoteGrep("grepservice1", v)
+	c1 := remoteGrep("grepservice2", v1)
+	c2 := remoteGrep("grepservice3", v2)
+	c3 := remoteGrep("grepservice4", v3)
+	fmt.Println("Response from local machine:", <-lc)
+	fmt.Println("Response from grepservice1:", <-c)
+	fmt.Println("Response from grepservice2:", <-c1)
+	fmt.Println("Response from grepservice3:", <-c2)
+	fmt.Println("Response from grepservice4:", <-c3)
+}
+
+func localGrep(ask, search, file string) <-chan string {
+	c := make(chan string)
+	go func() {
+		cmd := exec.Command(ask, search, file)
+		stdOutStdErr, err := cmd.CombinedOutput()
+		if err != nil {
+			log.Fatal(err)
+		}
+		c <- string(stdOutStdErr)
+	}()
+	return c
 }
 
 func remoteGrep(machine string, cmd url.Values) <-chan string {
@@ -52,7 +71,7 @@ func remoteGrep(machine string, cmd url.Values) <-chan string {
 	go func() {
 		resp, err := http.PostForm("http://"+machine+":8080/", cmd)
 		if err != nil {
-			log.Fatal("ERROR: sending request to remote http server")
+			log.Fatal("ERROR: sending request to remote http server", machine)
 		}
 		defer resp.Body.Close()
 		body, err := ioutil.ReadAll(resp.Body)
