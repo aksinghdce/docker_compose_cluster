@@ -4,10 +4,15 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 )
 
 func main() {
-	resp, err := http.Get("http://grepservice:8080/")
+	v := url.Values{}
+	v.Set("ask", "grep")
+	v.Add("option", "inr")
+	v.Add("pattern", "amit")
+	resp, err := http.PostForm("http://grepservice:8080/", v)
 	if err != nil {
 		fmt.Println("There was an error")
 	}
