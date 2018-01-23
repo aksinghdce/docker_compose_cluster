@@ -9,6 +9,10 @@ import (
 	"os/exec"
 )
 
+/*
+This program returns grep results from local machine. There is only one log file that is grepped
+the name of the log file that gets grepped is machine2.log for local and machine1.log for remote
+*/
 func main() {
 
 	/*
@@ -53,6 +57,11 @@ func main() {
 	fmt.Println("Response from grepservice4:", <-c3)
 }
 
+/*
+Name: localGrep
+Input: command, search pattern, filename
+Output: Channel of strings that carries grep command output
+*/
 func localGrep(ask, search, file string) <-chan string {
 	c := make(chan string)
 	go func() {
@@ -66,6 +75,11 @@ func localGrep(ask, search, file string) <-chan string {
 	return c
 }
 
+/*
+Name: remoteGrep
+Input: machine's hostname to be grepped, grep command
+Output: A channel that receives remote grep output
+*/
 func remoteGrep(machine string, cmd url.Values) <-chan string {
 	c := make(chan string)
 	go func() {

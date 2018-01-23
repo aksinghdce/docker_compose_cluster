@@ -9,17 +9,19 @@ import (
 	"os/exec"
 )
 
+/*
+A http server that listens for grep requests from peers
+Calls a handler to fetch the local grep and return the results
+*/
 func main() {
-	/**
-	1. Get a grep request from peer, parse it
-	2. Get a goroutine to get local grep
-	3. Have the grep result from local? Send it
-	**/
 	http.HandleFunc("/", commandHandler)
 	//nil as second argument meand we are using DefaultServeMux
 	http.ListenAndServe(":8080", nil)
 }
 
+/*
+the http server's request handler for "/" endpoint
+*/
 func commandHandler(resWriter http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	bodyBuff, err := ioutil.ReadAll(r.Body)
@@ -30,10 +32,25 @@ func commandHandler(resWriter http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	cmd := exec.Command(m.Get("ask"), m.Get("search"), m.Get("file"))
-	stdOutStdErr, err := cmd.CombinedOutput()
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Fprint(resWriter, string(stdOutStdErr))
+	c := localGrep(m.Get("ask"), m.Get("search"), m.Get("file"))
+
+	fmt.Fprint(resWriter, <-c)
+}
+
+/*
+Name: localGrep
+Input: command, search pattern, filename
+Output: Channel of strings that carries grep command output
+*/
+func localGrep(ask, search, file string) <-chan string {
+	c := make(chan string)
+	go func() {
+		cmd := exec.Command(ask, search, file)
+		stdOutStdErr, err := cmd.CombinedOutput()
+		if err != nil {
+			log.Fatal(err)
+		}
+		c <- string(stdOutStdErr)
+	}()
+	return c
 }
