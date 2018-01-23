@@ -3,5 +3,11 @@ version: '3'
 services:
   grepservice:
     build: ./http_server/.
+  grepservice1:
+    build: ./http_server1/.
+  grepservice2:
+    build: ./http_server2/.
+  grepservice3:
+    build: ./http_server3/.
   grepclient:
     build: ./http_client/.
