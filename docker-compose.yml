@@ -2,6 +2,6 @@ version: '3'
 
 services:
   grepservice:
-    build: ./http_go_server/.
+    build: ./http_server/.
   grepclient:
-    build: ./dockerized_go_client2/.
+    build: ./http_client/.
