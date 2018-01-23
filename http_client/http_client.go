@@ -15,6 +15,7 @@ func main() {
 	3. We have all the grep results, send it to client
 	**/
 
+	fmt.Println("Local Grep: ", localgrep("grep", "506901129", "machine2.log"))
 	v := url.Values{}
 	v.Set("ask", "grep")
 	v.Add("search", "tanuki")
