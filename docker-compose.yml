@@ -9,5 +9,5 @@ services:
     build: ./http_server3/.
   grepservice4:
     build: ./http_server4/.
-  grepclient:
-    build: ./http_client/.
+  grepservice5:
+    build: ./http_server5/.

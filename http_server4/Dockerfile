@@ -3,6 +3,7 @@ RUN mkdir /app
 ADD . /app/ 
 WORKDIR /app 
 EXPOSE 8080:8080
-RUN go build -o main main.go
-RUN go build -o http_client http_client.go
-CMD ["/app/main"]
+WORKDIR /app
+RUN go build -o clientgo client/main.go
+RUN go build -o servergo server/main.go
+CMD ["/app/servergo"]
