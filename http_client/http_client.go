@@ -84,10 +84,14 @@ func remoteGrep(machine string, cmd url.Values) <-chan string {
 	c := make(chan string)
 	go func() {
 		resp, err := http.PostForm("http://"+machine+":8080/", cmd)
-		if err != nil {
-			log.Fatal("ERROR: sending request to remote http server", machine)
+		if resp != nil {
+			defer resp.Body.Close()
 		}
-		defer resp.Body.Close()
+		if err != nil {
+			log.Println("ERROR: sending request to remote http server", machine)
+			c <- "Error connecting to remote host"
+			return
+		}
 		body, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
 			log.Fatal("Error reading response from remote")
