@@ -46,7 +46,7 @@ func main() {
 	v.Set("ask", cmd)
 	v.Add("search", search)
 	v.Add("file", logFile)
-	l := readLine("text.txt")
+	l := readconfig("text.txt")
 	// Iterate through list and print its contents.
 	for e := l.Front(); e != nil; e = e.Next() {
 		//fmt.Println(e.Value)
@@ -64,21 +64,21 @@ func main() {
 }
 
 /*
-Name: localGrep
-Input: command, search pattern, filename
-Output: Channel of strings that carries grep command output
+Input: Configuration file name: This file contains the name of servers
+Output: List of name of servers read from the configuration file
 */
-func localGrep(ask, search, file string) <-chan string {
-	c := make(chan string)
-	go func() {
-		cmd := exec.Command(ask, search, file)
-		stdOutStdErr, err := cmd.CombinedOutput()
-		if err != nil {
-			log.Fatal(err)
-		}
-		c <- string(stdOutStdErr)
-	}()
-	return c
+func readconfig(path string) *list.List {
+	l := list.New()
+	inFile, _ := os.Open(path)
+	defer inFile.Close()
+	scanner := bufio.NewScanner(inFile)
+	scanner.Split(bufio.ScanLines)
+
+	for scanner.Scan() {
+		//fmt.Println(scanner.Text())
+		l.PushBack(scanner.Text())
+	}
+	return l
 }
 
 /*
@@ -108,16 +108,20 @@ func remoteGrep(machine string, cmd url.Values) <-chan string {
 	return c
 }
 
-func readLine(path string) *list.List {
-	l := list.New()
-	inFile, _ := os.Open(path)
-	defer inFile.Close()
-	scanner := bufio.NewScanner(inFile)
-	scanner.Split(bufio.ScanLines)
-
-	for scanner.Scan() {
-		//fmt.Println(scanner.Text())
-		l.PushBack(scanner.Text())
-	}
-	return l
+/*
+Name: localGrep
+Input: command, search pattern, filename
+Output: Channel of strings that carries grep command output
+*/
+func localGrep(ask, search, file string) <-chan string {
+	c := make(chan string)
+	go func() {
+		cmd := exec.Command(ask, search, file)
+		stdOutStdErr, err := cmd.CombinedOutput()
+		if err != nil {
+			log.Fatal(err)
+		}
+		c <- string(stdOutStdErr)
+	}()
+	return c
 }
