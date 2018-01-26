@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
+	"strings"
 )
 
 /*
@@ -17,6 +18,12 @@ This program returns grep results from local machine. There is only one log file
 the name of the log file that gets grepped is machine2.log for local and machine1.log for remote
 */
 func main() {
+	argsWithProg := os.Args[1:]
+	fmt.Printf("The command line arguments: %s\n", argsWithProg)
+
+	if strings.Compare(argsWithProg[0], "grep") != 0 {
+		log.Fatal("It wasn't a grep command")
+	}
 
 	/*
 		Launch a goroutine to act as a server for peer's grep requests
@@ -26,9 +33,12 @@ func main() {
 	2. Launch a go routine that uses a FanIn function to get peer grep
 	3. We have all the grep results, send it to client
 	**/
-	cmd := "grep"
-	search := "tanuki"
-	logFile := "machine1.log"
+	//cmd := "grep"
+	//search := "tanuki"
+	//logFile := "machine1.log"
+	cmd := argsWithProg[0]
+	search := argsWithProg[1]
+	logFile := argsWithProg[2]
 	lc := localGrep(cmd, search, logFile)
 	fmt.Println("Response from local machine:", <-lc)
 	//Get grep result from remote machines
@@ -43,7 +53,7 @@ func main() {
 		if str, ok := e.Value.(string); ok {
 			/* act on str */
 			c := remoteGrep(str, v)
-			fmt.Println("Response from grepservice5:", <-c)
+			fmt.Printf("Response from %s:%s", str, <-c)
 		} else {
 			/* not string */
 			fmt.Println("The server names file doesn't have strings")
