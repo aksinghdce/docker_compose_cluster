@@ -30,7 +30,7 @@ func main() {
 	*/
 	/**
 	1. Launch a go routine to get local grep
-	2. Launch a go routine that uses a FanIn function to get peer grep
+	2. Launch a go routine to get peer grep results
 	3. We have all the grep results, send it to client
 	**/
 	//cmd := "grep"
