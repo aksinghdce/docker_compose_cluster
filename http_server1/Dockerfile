@@ -1,9 +1,8 @@
 FROM golang:latest 
-RUN mkdir /app 
-ADD . /app/ 
-WORKDIR /app 
+RUN mkdir /go/src/app 
+ADD . /go/src/app
+WORKDIR /go/src/app
 EXPOSE 8080:8080
-WORKDIR /app
-RUN go build -o clientgo client/main.go
-RUN go build -o servergo server/main.go
-CMD ["/app/servergo"]
+RUN go build -o servergo server/server.go
+RUN go build -o clientgo client/client.go
+CMD ["/go/src/app/servergo"]
