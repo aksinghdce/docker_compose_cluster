@@ -18,12 +18,17 @@ Input: command, search pattern, filename
 Output: Channel of strings that carries grep command output
 */
 func LocalGrep(ask, option, search, file string) string {
+	path, er := exec.LookPath(ask)
+	if er != nil {
+		log.Fatal(er)
+	}
+	fmt.Printf("The grep path:%s\n", path)
 	cmd := exec.Command(ask, option, search, file)
 	stdOutStdErr, err := cmd.CombinedOutput()
 	if err != nil {
 		log.Fatal(err)
+		return err.Error()
 	}
-	fmt.Printf("Output:%s", stdOutStdErr)
 	return string(stdOutStdErr)
 }
 
