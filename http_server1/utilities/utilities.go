@@ -3,6 +3,7 @@ package utilities
 import (
 	"bufio"
 	"container/list"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -16,17 +17,14 @@ Name: localGrep
 Input: command, search pattern, filename
 Output: Channel of strings that carries grep command output
 */
-func LocalGrep(ask, search, file string) <-chan string {
-	c := make(chan string)
-	go func() {
-		cmd := exec.Command(ask, search, file)
-		stdOutStdErr, err := cmd.CombinedOutput()
-		if err != nil {
-			log.Fatal(err)
-		}
-		c <- string(stdOutStdErr)
-	}()
-	return c
+func LocalGrep(ask, option, search, file string) string {
+	cmd := exec.Command(ask, option, search, file)
+	stdOutStdErr, err := cmd.CombinedOutput()
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("Output:%s", stdOutStdErr)
+	return string(stdOutStdErr)
 }
 
 /*

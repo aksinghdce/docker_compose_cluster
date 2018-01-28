@@ -30,7 +30,7 @@ func commandHandler(resWriter http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	c := localGrep(m.Get("ask"), m.Get("search"), m.Get("file"))
+	c := localGrep(m.Get("ask"), m.Get("option"), m.Get("search"), m.Get("file"))
 	fmt.Fprint(resWriter, <-c)
 }
 
@@ -39,10 +39,10 @@ Name: localGrep
 Input: command, search pattern, filename
 Output: Channel of strings that carries grep command output
 */
-func localGrep(ask, search, file string) <-chan string {
+func localGrep(ask, option, search, file string) <-chan string {
 	c := make(chan string)
 	go func() {
-		cmd := exec.Command(ask, search, file)
+		cmd := exec.Command(ask, option, search, file)
 		stdOutStdErr, err := cmd.CombinedOutput()
 		if err != nil {
 			log.Fatal(err)
