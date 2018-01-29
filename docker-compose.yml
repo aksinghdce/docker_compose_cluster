@@ -4,10 +4,10 @@ services:
   grepservice1:
     build: ./http_server1/.
   grepservice2:
-    build: ./http_server2/.
+    build: ./http_server1/.
   grepservice3:
-    build: ./http_server3/.
+    build: ./http_server1/.
   grepservice4:
-    build: ./http_server4/.
+    build: ./http_server1/.
   grepservice5:
-    build: ./http_server5/.
+    build: ./http_server1/.
