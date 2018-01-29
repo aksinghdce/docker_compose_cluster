@@ -17,13 +17,13 @@ Name: localGrep
 Input: command, search pattern, filename
 Output: Channel of strings that carries grep command output
 */
-func LocalGrep(ask, option, search, file string) string {
-	path, er := exec.LookPath(ask)
+func LocalGrep(arguments []string) string {
+	path, er := exec.LookPath(arguments[0])
 	if er != nil {
 		log.Fatal(er)
 	}
 	fmt.Printf("The grep path:%s\n", path)
-	cmd := exec.Command(ask, option, search, file)
+	cmd := exec.Command(arguments[0], arguments[1:]...)
 	stdOutStdErr, err := cmd.CombinedOutput()
 	if err != nil {
 		log.Fatal(err)
