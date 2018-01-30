@@ -3,7 +3,6 @@ package utilities
 import (
 	"bufio"
 	"container/list"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -18,10 +17,6 @@ Input: command, search pattern, filename
 Output: Channel of strings that carries grep command output
 */
 func LocalGrep(arguments []string) string {
-	path, er := exec.LookPath(arguments[0])
-	if er != nil {
-		log.Fatal(er)
-	}
 	cmd := exec.Command(arguments[0], arguments[1:]...)
 	stdOutStdErr, err := cmd.CombinedOutput()
 	if err != nil {
@@ -66,7 +61,6 @@ func ReadConfig(path string) *list.List {
 	scanner.Split(bufio.ScanLines)
 
 	for scanner.Scan() {
-		//fmt.Println(scanner.Text())
 		l.PushBack(scanner.Text())
 	}
 	return l
