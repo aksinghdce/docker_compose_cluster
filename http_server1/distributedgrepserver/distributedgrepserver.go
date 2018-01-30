@@ -1,12 +1,13 @@
 package main
 
 import (
+	"app/utilities"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
-	"os/exec"
+	"strings"
 )
 
 func main() {
@@ -15,6 +16,7 @@ func main() {
 	2. Get a goroutine to get local grep
 	3. Have the grep result from local? Send it
 	**/
+	// Declare a context object
 	http.HandleFunc("/", commandHandler)
 	//nil as second argument meand we are using DefaultServeMux
 	http.ListenAndServe(":8080", nil)
@@ -30,24 +32,7 @@ func commandHandler(resWriter http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	c := localGrep(m.Get("ask"), m.Get("option"), m.Get("search"), m.Get("file"))
-	fmt.Fprint(resWriter, <-c)
-}
 
-/*
-Name: localGrep
-Input: command, search pattern, filename
-Output: Channel of strings that carries grep command output
-*/
-func localGrep(ask, option, search, file string) <-chan string {
-	c := make(chan string)
-	go func() {
-		cmd := exec.Command(ask, option, search, file)
-		stdOutStdErr, err := cmd.CombinedOutput()
-		if err != nil {
-			log.Fatal(err)
-		}
-		c <- string(stdOutStdErr)
-	}()
-	return c
+	grepresult := utilities.LocalGrep(strings.Split(m.Get("grep"), " "))
+	fmt.Fprint(resWriter, grepresult)
 }

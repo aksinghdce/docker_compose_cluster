@@ -26,6 +26,7 @@ func main() {
 	}
 
 	var cluster utilities.Cluster
-	cluster.NewCluster("text.txt")
+	//text.txt is configuration file that contains the names of the nodes in the cluster
+	cluster.NewCluster("nodenames.txt")
 	fmt.Printf(cluster.Grep(argsWithProg))
 }

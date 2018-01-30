@@ -4,19 +4,20 @@ import (
 	"fmt"
 	"log"
 	"net/url"
+	"strings"
 )
 
 type node struct {
 	hostname string
 }
 
-func (n *node) Grep(commandstring []string) <- chan string {
-	fmt.Println("Commandstring:", commandstring)
+func (n *node) Grep(commandstrings []string) <- chan string {
+	if len(commandstrings) <= 0 {
+		log.Fatal("Grep command invalid")
+	}
+	fmt.Println("Commandstring:", commandstrings)
 	v := url.Values{}
-	v.Set("ask", commandstring[0])
-	v.Set("option", commandstring[1])
-	v.Add("search", commandstring[2])
-	v.Add("file", commandstring[3])
+	v.Add("grep", strings.Join(commandstrings, " "))
 	return RemoteGrep(n.hostname, v)
 }
 

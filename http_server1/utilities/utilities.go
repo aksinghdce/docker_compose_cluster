@@ -22,7 +22,6 @@ func LocalGrep(arguments []string) string {
 	if er != nil {
 		log.Fatal(er)
 	}
-	fmt.Printf("The grep path:%s\n", path)
 	cmd := exec.Command(arguments[0], arguments[1:]...)
 	stdOutStdErr, err := cmd.CombinedOutput()
 	if err != nil {
