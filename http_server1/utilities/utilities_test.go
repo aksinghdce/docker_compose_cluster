@@ -2,9 +2,18 @@ package utilities
 
 import (
 	"testing"
+	"os/exec"
 )
 
 func TestLocalGrep(t *testing.T) {
+	//Test whether grep command is found
+	_, err := exec.LookPath("grep")
+  	if err != nil {
+  		t.Fatalf("grep command not found")
+  	}
+	
+	/*Test basic grep functionality
+	*/
 	tt := []struct{
 		commandstringsslice []string
 		output string
