@@ -15,11 +15,12 @@ func TestLocalGrep(t *testing.T) {
 	/*Test basic grep functionality
 	*/
 	tt := []struct{
+		name string
 		commandstringsslice []string
 		output string
 	}{
-		{[]string{"grep", "-c", "8080", "/go/src/app/Dockerfile"}, "1"},
-		{[]string{"grep", "-c", "LOCAL LOG", "/go/src/app/local.log"}, "1"},
+		{"exporting 8080 grepped", []string{"grep", "-c", "8080", "/go/src/app/Dockerfile"}, "1"},
+		{"local log file creation grepped", []string{"grep", "-c", "LOCAL LOG", "/go/src/app/local.log"}, "1"},
 	}
 
 	for _, tc := range tt {
@@ -28,7 +29,7 @@ func TestLocalGrep(t *testing.T) {
 		outputexpected := tc.output
 		outputexpected += "\n"
 		if output != outputexpected {
-			t.Fatalf(`Sprintf("%%s", empty("7")) = %q want %q`, output, "7")
+			t.Fatalf("For test %s, got %q want %q\n", tc.name, output, tc.output)
 		}
 	}
 	
