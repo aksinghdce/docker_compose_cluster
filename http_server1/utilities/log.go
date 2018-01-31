@@ -23,7 +23,7 @@ func Log(ctx context.Context, msg string) {
 
 	id, ok := ctx.Value(requestIdKey).(int64)
 	if !ok {
-		log.Println("Couldn't retrieve request Id")
+		log.Println("LOCAL LOG")
 		return
 	}
 	log.Printf("[%d] %s\n", id, msg)

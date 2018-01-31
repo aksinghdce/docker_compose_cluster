@@ -10,9 +10,17 @@ import (
 	"strings"
 	"context"
 	"math/rand"
+	"time"
 )
 
 func main() {
+	/*
+	Create a log file on every node of the cluster for logging
+	user requests.
+	*/
+	ctx := context.Background()
+	startTime := time.Now()
+	utilities.Log(ctx, startTime.String())
 	/**
 	1. Get a grep request from peer, parse it
 	2. Get a goroutine to get local grep

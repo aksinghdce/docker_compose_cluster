@@ -19,6 +19,7 @@ func TestLocalGrep(t *testing.T) {
 		output string
 	}{
 		{[]string{"grep", "-c", "8080", "/go/src/app/Dockerfile"}, "1"},
+		{[]string{"grep", "-c", "LOCAL LOG", "/go/src/app/local.log"}, "1"},
 	}
 
 	for _, tc := range tt {
