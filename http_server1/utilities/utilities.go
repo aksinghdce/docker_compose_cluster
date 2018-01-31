@@ -9,6 +9,9 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
+	"strings"
+	"context"
+	"time"
 )
 
 /*
@@ -34,7 +37,13 @@ Output: A channel that receives remote grep output
 func RemoteGrep(machine string, cmd url.Values) <-chan string {
 	c := make(chan string)
 	go func() {
-		resp, err := http.PostForm("http://"+machine+":8080/", cmd)
+		req, err := http.NewRequest("POST", "http://"+machine+":8080/", strings.NewReader(cmd.Encode()))
+		ctx := context.Background()
+		// Don't wait for more than a second to get the grep result from remote server
+		ctx, cancel := context.WithTimeout(ctx, time.Second)
+		defer cancel()
+		req2 := req.WithContext(ctx)
+		resp, err := http.DefaultClient.Do(req2)
 		if resp != nil {
 			defer resp.Body.Close()
 		}
@@ -43,7 +52,6 @@ func RemoteGrep(machine string, cmd url.Values) <-chan string {
 			c <- "Error connecting to remote host"
 			return
 		}
-
 		body, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
 			log.Fatal("Error reading response from remote")

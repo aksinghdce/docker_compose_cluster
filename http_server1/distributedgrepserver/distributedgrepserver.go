@@ -2,12 +2,14 @@ package main
 
 import (
 	"app/utilities"
+	"log"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/url"
 	"strings"
+	"context"
+	"math/rand"
 )
 
 func main() {
@@ -17,13 +19,16 @@ func main() {
 	3. Have the grep result from local? Send it
 	**/
 	// Declare a context object
-	http.HandleFunc("/", commandHandler)
+	http.HandleFunc("/", utilities.Decorate(commandHandler))
 	//nil as second argument meand we are using DefaultServeMux
 	http.ListenAndServe(":8080", nil)
 }
 
 func commandHandler(resWriter http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
+	ctx := r.Context()
+	ctx = context.WithValue(ctx, int(42), rand.Int63())
+	utilities.Println(ctx, "grep request handler started")
 	bodyBuff, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		log.Fatal(err)
@@ -34,5 +39,6 @@ func commandHandler(resWriter http.ResponseWriter, r *http.Request) {
 	}
 
 	grepresult := utilities.LocalGrep(strings.Split(m.Get("grep"), " "))
+	utilities.Println(ctx, "grep request handler finished")
 	fmt.Fprint(resWriter, grepresult)
 }
