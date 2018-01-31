@@ -2,22 +2,31 @@ package utilities
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"math/rand"
 	"log"
+	"os"
 )
 
 type key int
 const requestIdKey = key(42)
 
-func Println(ctx context.Context, msg string) {
+/*Incomplete function
+*/
+func Log(ctx context.Context, msg string) {
+	f, err := os.OpenFile("local.log", os.O_RDWR | os.O_CREATE | os.O_APPEND, 0666)
+	if err != nil {
+    	log.Fatalf("error opening file: %v", err)
+	}
+	defer f.Close()
+	log.SetOutput(f)
+
 	id, ok := ctx.Value(requestIdKey).(int64)
 	if !ok {
 		log.Println("Couldn't retrieve request Id")
 		return
 	}
-	fmt.Println("[%d] %s\n", id, msg)
+	log.Printf("[%d] %s\n", id, msg)
 }
 
 func Decorate(f http.HandlerFunc) http.HandlerFunc {

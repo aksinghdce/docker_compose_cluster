@@ -28,7 +28,7 @@ func commandHandler(resWriter http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	ctx := r.Context()
 	ctx = context.WithValue(ctx, int(42), rand.Int63())
-	utilities.Println(ctx, "grep request handler started")
+	
 	bodyBuff, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		log.Fatal(err)
@@ -38,7 +38,8 @@ func commandHandler(resWriter http.ResponseWriter, r *http.Request) {
 		log.Fatal(err)
 	}
 
-	grepresult := utilities.LocalGrep(strings.Split(m.Get("grep"), " "))
-	utilities.Println(ctx, "grep request handler finished")
+	grepCommand := m.Get("grep")
+	grepresult := utilities.LocalGrep(strings.Split(grepCommand, " "))
+	utilities.Log(ctx, grepCommand)
 	fmt.Fprint(resWriter, grepresult)
 }
