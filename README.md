@@ -79,7 +79,7 @@ So, effectively you have grepped for "8080" in a file called "Dockerfile" and go
 The test cases are written for all the packages developed for this project. [Some test cases are work in progress]
 
 ```
-PS C:\Users\aksin\go\src\docker_compose_cluster> docker exec dockercomposecluster_grepservice1_1 go test ./utilities
+PS C:\Users\aksin\go\src\docker_compose_cluster> docker exec dockercomposecluster_grepservice1_1 go test -v ./utilities
 ok      app/utilities   0.052s
 ```
 
