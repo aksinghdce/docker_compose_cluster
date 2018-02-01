@@ -2,9 +2,13 @@ package main
 
 import (
 	/*My project packages are kept at /go/src/app
+	when they run inside of a docker container environment.
 	In order to use my utility packages I need to
-	import my packages like this. The project packages path is
-	mentioned in Dockerfile*/
+	import my packages like this. There is a problem that I noticed, 
+	because app/utilities is not in the GOPATH of my windows go environment
+	I can't use the visual studio code's tools for go project management
+
+	The project packages path for docker containers is mentioned in Dockerfile*/
 	"app/utilities"
 	"fmt"
 	"log"
