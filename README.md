@@ -80,7 +80,18 @@ The test cases are written for all the packages developed for this project. [Som
 
 ```
 PS C:\Users\aksin\go\src\docker_compose_cluster> docker exec dockercomposecluster_grepservice1_1 go test -v ./utilities
-ok      app/utilities   0.052s
+=== RUN   TestCluster
+--- PASS: TestCluster (0.00s)
+=== RUN   TestLocalGrep
+=== RUN   TestLocalGrep/exporting_8080_grepped
+=== RUN   TestLocalGrep/local_log_file_creation_grepped
+--- PASS: TestLocalGrep (0.00s)
+    --- PASS: TestLocalGrep/exporting_8080_grepped (0.00s)
+    --- PASS: TestLocalGrep/local_log_file_creation_grepped (0.00s)
+=== RUN   ExampleLocalGrep
+--- PASS: ExampleLocalGrep (0.00s)
+PASS
+ok      app/utilities   0.008s
 ```
 
 ### And coding style tests
