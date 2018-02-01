@@ -13,7 +13,7 @@ const requestIdKey = key(42)
 
 /*Incomplete function
 */
-func Log(ctx context.Context, msg string) {
+func Log(ctx context.Context, msg ...string) {
 	f, err := os.OpenFile("local.log", os.O_RDWR | os.O_CREATE | os.O_APPEND, 0666)
 	if err != nil {
     	log.Fatalf("error opening file: %v", err)

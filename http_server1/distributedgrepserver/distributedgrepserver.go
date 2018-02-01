@@ -36,6 +36,26 @@ func commandHandler(resWriter http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	ctx := r.Context()
 	ctx = context.WithValue(ctx, int(42), rand.Int63())
+
+	/* The following 5 lines of code is to test that whether I
+	am using the standard way of passing values from the client.
+
+	The code prints "Missiong request form value" when run
+	We will take a look at this later to see if we need to 
+	get the grep command through form
+	*/
+	text := r.FormValue("grep")
+	if text == "" {
+		utilities.Log(ctx, "Missiong request form value")
+	}
+	 utilities.Log(ctx, "test in Request Form: %s", text)
+	 /* The above lines of code is to test that whether I
+	am using the standard way of passing values from the client.
+
+	The code prints "Missiong request form value" when run
+	We will take a look at this later to see if we need to 
+	get the grep command through form
+	*/
 	
 	bodyBuff, err := ioutil.ReadAll(r.Body)
 	if err != nil {
