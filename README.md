@@ -77,7 +77,7 @@ So, effectively you have grepped for "8080" in a file called "Dockerfile" and go
 ### Break down into end to end tests
 
 The test cases are written for all the packages developed for this project. [Some test cases are work in progress]
-
+The following test, tests the local node's grepping responsibility:
 ```
 PS C:\Users\aksin\go\src\docker_compose_cluster> docker exec dockercomposecluster_grepservice1_1 go test -v ./utilities
 === RUN   TestCluster
@@ -93,6 +93,16 @@ PS C:\Users\aksin\go\src\docker_compose_cluster> docker exec dockercomposecluste
 PASS
 ok      app/utilities   0.008s
 ```
+
+The following test, tests the http server's handler:
+```
+PS C:\Users\aksin> docker exec dockercomposecluster_grepservice1_1 go test -v ./distributedgrepserver
+=== RUN   TestCommandHandler
+--- PASS: TestCommandHandler (0.00s)
+PASS
+ok      app/distributedgrepserver       0.005s
+```
+
 
 ### And coding style tests
 
