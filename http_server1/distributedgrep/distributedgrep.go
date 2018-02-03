@@ -11,26 +11,32 @@ import (
 	The project packages path for docker containers is mentioned in Dockerfile*/
 	"app/utilities"
 	"fmt"
-	"log"
 	"os"
+	"context"
 )
 
 /*
 This program returns grep results from local machine. There is only one log file that is grepped
 the name of the log file that gets grepped is machine2.log for local and machine1.log for remote
 */
+
+/*
+Alert: The program doesn't support multiple words in the search pattern for grep
+*/
 func main() {
+	ctx := context.Background()
+	utilities.Log(ctx, "Client began")
 	argsWithProg := os.Args[1:]
 	if len(argsWithProg) < 2 {
-		log.Fatal("<grep> <options> <pattern> <file>")
+		utilities.Log(ctx,"<grep> <options> <pattern> <file>")
 	}
 	
 	if argsWithProg[0] != "grep" {
-		log.Fatal("Panic: Wasn't a grep command")
+		utilities.Log(ctx,"Panic: Wasn't a grep command")
 	}
 
 	var cluster utilities.Cluster
-	//text.txt is configuration file that contains the names of the nodes in the cluster
+	//nodenames.txt is configuration file that contains the names of the nodes in the cluster
 	cluster.NewCluster("nodenames.txt")
 	fmt.Printf(cluster.Grep(argsWithProg))
 }

@@ -27,7 +27,7 @@ func TestLocalGrep(t *testing.T) {
 		output string
 	}{
 		{"exporting 8080 grepped", []string{"grep", "-c", "8080", "/go/src/app/Dockerfile"}, "1"},
-		{"local log file creation grepped", []string{"grep", "-c", "LOCAL LOG", "/go/src/app/local.log"}, "1"},
+		{"local log file creation grepped", []string{"grep", "-c", "LOCAL", "/go/src/app/local.log"}, "1"},
 	}
 
 	/*Within this loop I will form subtests to test every function in this package.
@@ -42,8 +42,13 @@ func TestLocalGrep(t *testing.T) {
 			output = LocalGrep(tc.commandstringsslice)
 			outputexpected := tc.output
 			outputexpected += "\n"
-			if output != outputexpected {
-				t.Fatalf("For test %s, got %q want %q\n", tc.name, output, tc.output)
+			output = strings.Trim(output, " ")
+			result := strconv(output)
+			
+			outputexpected = strings.Trim(outputexpected, " ")
+			expected := strconv(outputexpected)
+			if result >= expected  {
+				t.Fatalf("Test case: %s - Got %q which is smaller than %q\n", tc.name, output, tc.output)
 			}
 		})
 		
