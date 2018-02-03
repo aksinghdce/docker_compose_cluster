@@ -120,7 +120,7 @@ Give an example
 ## Authors
 
 * **Amit Kumar Singh** - *Initial work* - [Aksinghdce](https://github.com/Aksinghdce)
-* **Vimal Philippe** - *Initial work* - [Vimalphilip](https://github.com/vimalphilip)
+* **Vimal Philip** - *Initial work* - [Vimalphilip](https://github.com/vimalphilip)
 
 See also the list of [contributors](https://github.com/aksinghdce/docker_compose_cluster/contributors) who participated in this project.
 
