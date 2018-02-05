@@ -1,6 +1,6 @@
 Read a more dynamic document of this README : https://tinyurl.com/ybhw2kpc
 
-# Project Title
+# Distributed grep
 
 This is a Distributed Systems project developed with Docker and GoLang. The distributed service being implemented in this project is "distributedgrep" (distributed grep).
 
