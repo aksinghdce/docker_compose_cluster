@@ -28,7 +28,7 @@ func main() {
 	utilities.Log(ctx, "Client began")
 	argsWithProg := os.Args[1:]
 	if len(argsWithProg) < 2 {
-		utilities.Log(ctx,"<grep> <options> <pattern> <file>")
+		utilities.Log(ctx,"distributedgrep <grep> <options> <pattern> <file>")
 	}
 	
 	if argsWithProg[0] != "grep" {
