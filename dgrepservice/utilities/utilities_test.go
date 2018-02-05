@@ -8,23 +8,25 @@ code coverage
 */
 
 import (
-	"testing"
 	"os/exec"
+	"strings"
+	"testing"
+	"strconv"
 )
 
 func TestLocalGrep(t *testing.T) {
 	//Test whether grep command is found
 	_, err := exec.LookPath("grep")
-  	if err != nil {
-  		t.Fatalf("grep command not found")
-  	}
-	
+	if err != nil {
+		t.Fatalf("grep command not found")
+	}
+
 	/*Test basic grep functionality
-	*/
-	tt := []struct{
-		name string
+	 */
+	tt := []struct {
+		name                string
 		commandstringsslice []string
-		output string
+		output              string
 	}{
 		{"exporting 8080 grepped", []string{"grep", "-c", "8080", "/go/src/app/Dockerfile"}, "1"},
 		{"local log file creation grepped", []string{"grep", "-c", "LOCAL", "/go/src/app/local.log"}, "1"},
@@ -37,21 +39,28 @@ func TestLocalGrep(t *testing.T) {
 	tests in those packages
 	*/
 	for _, tc := range tt {
-		t.Run(tc.name, func(t *testing.T){
+		t.Run(tc.name, func(t *testing.T) {
 			var output string
 			output = LocalGrep(tc.commandstringsslice)
 			outputexpected := tc.output
 			outputexpected += "\n"
 			output = strings.Trim(output, " ")
-			result := strconv(output)
-			
+			result, err := strconv.Atoi(strings.Trim(output, "\n"))
+			if err != nil {
+				t.Fatalf("strconv error:", err.Error())
+			}
+
 			outputexpected = strings.Trim(outputexpected, " ")
-			expected := strconv(outputexpected)
-			if result >= expected  {
-				t.Fatalf("Test case: %s - Got %q which is smaller than %q\n", tc.name, output, tc.output)
+			expected, errex := strconv.Atoi(strings.Trim(outputexpected, "\n"))
+			if errex != nil {
+				t.Fatalf("strconv error:", errex.Error())
+			}
+			
+			if result < expected {
+				t.Fatalf("Test case: %s - Got %q which is smaller than %q\n", tc.name, result, expected)
 			}
 		})
-		
+
 	}
-	
+
 }

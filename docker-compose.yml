@@ -2,12 +2,12 @@ version: '3'
 
 services:
   grepservice1:
-    build: ./http_server1/.
+    build: ./dgrepservice/.
   grepservice2:
-    build: ./http_server1/.
+    build: ./dgrepservice/.
   grepservice3:
-    build: ./http_server1/.
+    build: ./dgrepservice/.
   grepservice4:
-    build: ./http_server1/.
+    build: ./dgrepservice/.
   grepservice5:
-    build: ./http_server1/.
+    build: ./dgrepservice/.
