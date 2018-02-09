@@ -2,21 +2,21 @@ package main
 
 import (
 	"app/utilities"
-	"log"
+	"context"
 	"fmt"
 	"io/ioutil"
+	"log"
+	"math/rand"
 	"net/http"
 	"net/url"
 	"strings"
-	"context"
-	"math/rand"
 	"time"
 )
 
 func main() {
 	/*
-	Create a log file on every node of the cluster for logging
-	user requests.
+		Create a log file on every node of the cluster for logging
+		user requests.
 	*/
 	ctx := context.Background()
 	startTime := time.Now()
@@ -26,10 +26,14 @@ func main() {
 	2. Get a goroutine to get local grep
 	3. Have the grep result from local? Send it
 	**/
+	http.ListenAndServe(":8080", handler())
+}
+
+func handler() http.Handler {
+	r := http.NewServeMux()
 	// Declare a context object
-	http.HandleFunc("/", utilities.Decorate(commandHandler))
-	//nil as second argument meand we are using DefaultServeMux
-	http.ListenAndServe(":8080", nil)
+	r.HandleFunc("/", utilities.Decorate(commandHandler))
+	return r
 }
 
 func commandHandler(resWriter http.ResponseWriter, r *http.Request) {
@@ -41,22 +45,22 @@ func commandHandler(resWriter http.ResponseWriter, r *http.Request) {
 	am using the standard way of passing values from the client.
 
 	The code prints "Missiong request form value" when run
-	We will take a look at this later to see if we need to 
+	We will take a look at this later to see if we need to
 	get the grep command through form
 	*/
 	text := r.FormValue("grep")
 	if text == "" {
 		utilities.Log(ctx, "Missiong request form value")
 	}
-	 utilities.Log(ctx, "test in Request Form: %s", text)
-	 /* The above lines of code is to test that whether I
+	utilities.Log(ctx, "test in Request Form: %s", text)
+	/* The above lines of code is to test that whether I
 	am using the standard way of passing values from the client.
 
 	The code prints "Missiong request form value" when run
-	We will take a look at this later to see if we need to 
+	We will take a look at this later to see if we need to
 	get the grep command through form
 	*/
-	
+
 	bodyBuff, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		log.Fatal(err)
