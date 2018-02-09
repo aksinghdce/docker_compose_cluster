@@ -1,15 +1,16 @@
 package main
 
 import (
-	"net/http"
-	"testing"
-	"strings"
 	"app/utilities"
-	"context"
-	"net/url"
-	"net/http/httptest"
-	"io/ioutil"
 	"bytes"
+	"context"
+	"fmt"
+	"io/ioutil"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
+	"strings"
+	"testing"
 )
 
 func TestCommandHandler(t *testing.T) {
@@ -24,7 +25,7 @@ func TestCommandHandler(t *testing.T) {
 
 	//We will send this request to the handler we are testing
 	/*This information is something I would need to memorize :D */
-	// httptest.NewRecorder() does the same as http.ResponseWriter does 
+	// httptest.NewRecorder() does the same as http.ResponseWriter does
 	// They both implement the same interface
 	rec := httptest.NewRecorder()
 	commandHandler(rec, req)
@@ -39,10 +40,25 @@ func TestCommandHandler(t *testing.T) {
 	if err != nil {
 		t.Errorf(err.Error())
 	}
-	
+
 	output := string(bytes.TrimSpace(bodyBuff))
 
 	if output != "1" {
 		t.Errorf("Expected 1, got %v", output)
 	}
+}
+
+func TestRouting(t *testing.T) {
+	s := httptest.NewServer(handler())
+	defer s.Close()
+
+	res, err := http.Get(fmt.Sprintf("%s/", s.URL))
+	if err != nil {
+		t.Fatalf("could not send Get request %v", err)
+	}
+
+	if res.StatusCode != http.StatusOK {
+		t.Errorf("expected StatusOK got %v", res.Status)
+	}
+
 }
