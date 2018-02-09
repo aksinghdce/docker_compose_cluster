@@ -9,9 +9,9 @@ code coverage
 
 import (
 	"os/exec"
+	"strconv"
 	"strings"
 	"testing"
-	"strconv"
 )
 
 func TestLocalGrep(t *testing.T) {
@@ -47,15 +47,15 @@ func TestLocalGrep(t *testing.T) {
 			output = strings.Trim(output, " ")
 			result, err := strconv.Atoi(strings.Trim(output, "\n"))
 			if err != nil {
-				t.Fatalf("strconv error:", err.Error())
+				t.Fatalf("strconv error: %v", err)
 			}
 
 			outputexpected = strings.Trim(outputexpected, " ")
 			expected, errex := strconv.Atoi(strings.Trim(outputexpected, "\n"))
 			if errex != nil {
-				t.Fatalf("strconv error:", errex.Error())
+				t.Fatalf("strconv error: %v", errex)
 			}
-			
+
 			if result < expected {
 				t.Fatalf("Test case: %s - Got %q which is smaller than %q\n", tc.name, result, expected)
 			}
