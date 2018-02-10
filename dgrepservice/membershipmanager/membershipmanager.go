@@ -7,25 +7,25 @@ type Event interface {
 	getEvent() string
 }
 
-type AddEvent struct {
+type AddNodeEvent struct {
 	hostname  string
 	ipAddress string
 	timeStamp string
 }
 
-func (addEvent *AddEvent) getSource() string {
-	return "source 1"
+func (ane *AddNodeEvent) getSource() string {
+	return ane.hostname
 }
 
-func (addEvent *AddEvent) getStimulus() string {
-	return "stimulus 1"
+func (ane *AddNodeEvent) getStimulus() string {
+	return ane.ipAddress
 }
 
-func (addEvent *AddEvent) getArtifact() string {
-	return "artifact 1"
+func (ane *AddNodeEvent) getArtifact() string {
+	return ane.timeStamp
 }
 
-func (addEvent *AddEvent) getEvent() string {
+func (AddNodeEvent *AddNodeEvent) getEvent() string {
 	return "event 1"
 }
 
@@ -35,6 +35,8 @@ The statemachine keeps the distributed cluster state
 */
 type MembershipManager interface {
 	GetGroupInfo() []string
+	AddNodeToGroup() (error, string)
+	RemoveNodeFromGroup() (error, string)
 }
 
 type ExtendedRingManager struct {
@@ -43,6 +45,14 @@ type ExtendedRingManager struct {
 
 func (erm *ExtendedRingManager) GetGroupInfo() []string {
 	return erm.groupInfo
+}
+
+func (erm *ExtendedRingManager) AddNodeToGroup() (error, string) {
+	return nil, "success"
+}
+
+func (erm *ExtendedRingManager) RemoveNodeFromGroup() (error, string) {
+	return nil, "success"
 }
 
 /*

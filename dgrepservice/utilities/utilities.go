@@ -3,6 +3,7 @@ package utilities
 import (
 	"bufio"
 	"container/list"
+	"context"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -10,10 +11,8 @@ import (
 	"os"
 	"os/exec"
 	"strings"
-	"context"
 	"time"
 )
-
 
 /*
 Name: localGrep
@@ -38,7 +37,7 @@ Output: A channel that receives remote grep output
 func RemoteGrep(machine string, cmd url.Values) <-chan string {
 	c := make(chan string)
 	go func() {
-		req, err := http.NewRequest("POST", "http://"+machine+":8080/", strings.NewReader(cmd.Encode()))
+		req, err := http.NewRequest("POST", "http://"+machine+":8080/grep", strings.NewReader(cmd.Encode()))
 		ctx := context.Background()
 		// Don't wait for more than a second to get the grep result from remote server
 		ctx, cancel := context.WithTimeout(ctx, time.Second)

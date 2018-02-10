@@ -31,11 +31,17 @@ func main() {
 
 func handler() http.Handler {
 	r := http.NewServeMux()
-	// Declare a context object
-	r.HandleFunc("/", utilities.Decorate(commandHandler))
+	r.HandleFunc("/grep", utilities.DecorateWithLog(commandHandler))
+	// TO-DO : Add a handler function (with a specification comment)
+	// similar to the commandHandler to send data from peers to MembershipManager
+	// send appropriate data about the peer to the membership service to service
+	// 3 kinds of events, as described in the assignment statement.
 	return r
 }
 
+/*
+Specification
+*/
 func commandHandler(resWriter http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	ctx := r.Context()
