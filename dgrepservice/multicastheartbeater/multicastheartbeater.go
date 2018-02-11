@@ -8,6 +8,10 @@ import (
 	"time"
 )
 
+/*It's a multicast ip address on which leader listens
+to ADD requests.*/
+const Leaderaddress = "224.0.0.1:10001"
+
 func CheckError(err error) {
 	if err != nil {
 		fmt.Println("Error: ", err)
@@ -16,7 +20,7 @@ func CheckError(err error) {
 }
 
 func main() {
-	ServerAddr, err := net.ResolveUDPAddr("udp", "224.0.0.1:10001")
+	ServerAddr, err := net.ResolveUDPAddr("udp", Leaderaddress)
 	CheckError(err)
 
 	LocalAddr, err := net.ResolveUDPAddr("udp", ":10002")
