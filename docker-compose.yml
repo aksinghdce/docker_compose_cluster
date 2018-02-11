@@ -3,11 +3,21 @@ version: '3'
 services:
   grepservice1:
     build: ./dgrepservice/.
+    hostname: leader
+    domainname: assignment2
   grepservice2:
     build: ./dgrepservice/.
+    hostname: node2
+    domainname: assignment2
   grepservice3:
     build: ./dgrepservice/.
+    hostname: node3
+    domainname: assignment2
   grepservice4:
     build: ./dgrepservice/.
+    hostname: node3
+    domainname: assignment2
   grepservice5:
     build: ./dgrepservice/.
+    hostname: node4
+    domainname: assignment2

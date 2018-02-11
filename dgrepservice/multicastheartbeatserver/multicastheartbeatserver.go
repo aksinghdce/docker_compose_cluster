@@ -18,9 +18,31 @@ func CheckError(err error) {
 Multicast address: 172.20.0.1 ?
 */
 func main() {
+	/*What's my hostname?
+	 */
+	hostname, err := os.Hostname()
+	CheckError(err)
+	fmt.Printf("My hostname:%s\n", hostname)
+
+	// If my hostname is not leader.assignment2
+	// I should just be doing the service and not lead
+	// I will ask the leader to add me to his group of
+	// workers until he doesn't add me. If he says no, I
+	// should just die.
+	if hostname != "leader.assignment2" {
+		fmt.Printf("I am not a leader. I am too old to serve. I will just die")
+		os.Exit(0)
+	}
+
+	/*Get all the interfaces on the machine*/
 	ifsArr, err := net.Interfaces()
 	CheckError(err)
 
+	/*For the interfaces that support multicast, listen to
+	a udp port and wait for x seconds to see if there is a
+	leader. If there is no leader the first computer must
+	become leader.
+	*/
 	for _, ifs := range ifsArr {
 		flag := ifs.Flags.String()
 		if strings.Contains(flag, "multicast") {
@@ -32,6 +54,7 @@ func main() {
 				fmt.Println("Fault 1: ", err)
 				continue
 			}
+			/*Keep listening on  if this node is the leader*/
 			for {
 				for index, addr := range multicastaddresses {
 					fmt.Println("Network:", addr.Network())
