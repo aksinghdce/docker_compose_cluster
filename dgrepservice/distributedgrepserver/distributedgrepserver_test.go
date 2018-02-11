@@ -18,7 +18,7 @@ func TestCommandHandler(t *testing.T) {
 	cmd := url.Values{}
 	cmdstrings := []string{"grep", "-c", "8080", "/go/src/app/Dockerfile"}
 	cmd.Add("grep", strings.Join(cmdstrings, " "))
-	req, err := http.NewRequest("POST", "http://localhost:8080/", strings.NewReader(cmd.Encode()))
+	req, err := http.NewRequest("POST", "http://localhost:8080/grep", strings.NewReader(cmd.Encode()))
 	if err != nil {
 		utilities.Log(context.Background(), "Error creating test request")
 	}
@@ -52,7 +52,7 @@ func TestRouting(t *testing.T) {
 	s := httptest.NewServer(handler())
 	defer s.Close()
 
-	res, err := http.Get(fmt.Sprintf("%s/", s.URL))
+	res, err := http.Get(fmt.Sprintf("%s/grep", s.URL))
 	if err != nil {
 		t.Fatalf("could not send Get request %v", err)
 	}
