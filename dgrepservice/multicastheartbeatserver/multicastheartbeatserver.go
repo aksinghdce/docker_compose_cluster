@@ -32,38 +32,42 @@ func main() {
 				fmt.Println("Fault 1: ", err)
 				continue
 			}
-			for index, addr := range multicastaddresses {
-				fmt.Println("Network:", addr.Network())
-				addstr := addr.String()
-				addstr += ":10001"
-				udpaddr, err := net.ResolveUDPAddr("udp", addstr)
-				if err != nil {
-					fmt.Println("Fault 2: ", err)
-					continue
-				}
+			for {
+				for index, addr := range multicastaddresses {
+					fmt.Println("Network:", addr.Network())
+					addstr := addr.String()
+					addstr += ":10001"
+					udpaddr, err := net.ResolveUDPAddr("udp", addstr)
+					if err != nil {
+						fmt.Println("Fault 2: ", err)
+						continue
+					}
 
-				fmt.Printf("multicast address %d : %s\n", index, addr.String())
-				//func ListenMulticastUDP(network string, ifi *Interface, gaddr *UDPAddr) (*UDPConn, error)
-				interf, err := net.InterfaceByIndex(ifs.Index)
-				if err != nil {
-					fmt.Println("Fault 3: ", err)
-					continue
-				}
-				conn, err := net.ListenMulticastUDP("udp", interf, udpaddr)
-				if err != nil {
-					fmt.Println("Fault 4: ", err)
-					continue
-				}
-				defer conn.Close()
+					fmt.Printf("multicast address %d : %s\n", index, addr.String())
+					//func ListenMulticastUDP(network string, ifi *Interface, gaddr *UDPAddr) (*UDPConn, error)
+					interf, err := net.InterfaceByIndex(ifs.Index)
+					if err != nil {
+						fmt.Println("Fault 3: ", err)
+						continue
+					}
+					conn, err := net.ListenMulticastUDP("udp", interf, udpaddr)
+					if err != nil {
+						fmt.Println("Fault 4: ", err)
+						continue
+					}
+					defer conn.Close()
 
-				buf := make([]byte, 256)
-				_, _, err2 := conn.ReadFromUDP(buf)
-				if err2 != nil {
-					fmt.Println("Fault 5: ", err2)
-					continue
+					buf := make([]byte, 256)
+					_, udpaddr, err2 := conn.ReadFromUDP(buf)
+					if err2 != nil {
+						fmt.Println("Fault 5: ", err2)
+						continue
+					}
+					fmt.Printf("From %s Data received: %s\n", udpaddr.String(), string(buf))
+					break
 				}
-				fmt.Println("Data received:", string(buf))
 			}
+
 		}
 
 	}
