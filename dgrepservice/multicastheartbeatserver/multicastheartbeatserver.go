@@ -14,6 +14,8 @@ func CheckError(err error) {
 	}
 }
 
+const LEADER_MULTICAST_UDP_PORT_STRING = ":10001"
+
 /*
 Multicast address: 172.20.0.1 ?
 */
@@ -30,6 +32,16 @@ func main() {
 	// workers until he doesn't add me. If he says no, I
 	// should just die.
 	if hostname != "leader.assignment2" {
+		/*
+			We can branch out of here for non-leaders to send ADD request to the leader
+			Cases:
+				1. If the leader doesn't respond to ping datagrams: Leader is dead
+				2. If the leader does respond to ping datagrams but denies ADD request
+				3. Leader is alive, does ADD me and tells me my responsibilities of pinging
+				a few nodes and reporting about their death.
+					If I report about the death of a node for whom I am responsible
+						then the leader gives me more nodes to look after
+		*/
 		fmt.Printf("I am not a leader. I am too old to serve. I will just die")
 		os.Exit(0)
 	}
@@ -40,8 +52,7 @@ func main() {
 
 	/*For the interfaces that support multicast, listen to
 	a udp port and wait for x seconds to see if there is a
-	leader. If there is no leader the first computer must
-	become leader.
+	node that wants to join as a node in the cluster I am managing.
 	*/
 	for _, ifs := range ifsArr {
 		flag := ifs.Flags.String()
@@ -54,15 +65,18 @@ func main() {
 				fmt.Println("Fault 1: ", err)
 				continue
 			}
-			/*Keep listening on  if this node is the leader*/
+			/*I am the leader I will keep listening to events
+			from my group.*/
 			for {
 				for index, addr := range multicastaddresses {
 					fmt.Println("Network:", addr.Network())
 					addstr := addr.String()
-					addstr += ":10001"
+					addstr += LEADER_MULTICAST_UDP_PORT_STRING
 					udpaddr, err := net.ResolveUDPAddr("udp", addstr)
 					if err != nil {
 						fmt.Println("Fault 2: ", err)
+						/*We will continue until we find a multicast UDP
+						port that works*/
 						continue
 					}
 
@@ -71,6 +85,8 @@ func main() {
 					interf, err := net.InterfaceByIndex(ifs.Index)
 					if err != nil {
 						fmt.Println("Fault 3: ", err)
+						/*This
+						 */
 						continue
 					}
 					conn, err := net.ListenMulticastUDP("udp", interf, udpaddr)
