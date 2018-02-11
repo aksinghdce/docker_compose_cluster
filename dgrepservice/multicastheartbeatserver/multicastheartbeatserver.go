@@ -7,6 +7,9 @@ import (
 	"strings"
 )
 
+/*
+Check generic error.
+*/
 func CheckError(err error) {
 	if err != nil {
 		fmt.Println("Exiting with Error: ", err)
@@ -14,6 +17,11 @@ func CheckError(err error) {
 	}
 }
 
+/*
+Leader wants to listen on this port for heartbeats
+And listen to serious data and control requests on
+TCP protocol 8080
+*/
 const LEADER_MULTICAST_UDP_PORT_STRING = ":10001"
 
 /*
@@ -85,13 +93,15 @@ func main() {
 					interf, err := net.InterfaceByIndex(ifs.Index)
 					if err != nil {
 						fmt.Println("Fault 3: ", err)
-						/*This
-						 */
+						/*We will continue until we find a multicast UDP
+						port that works*/
 						continue
 					}
 					conn, err := net.ListenMulticastUDP("udp", interf, udpaddr)
 					if err != nil {
 						fmt.Println("Fault 4: ", err)
+						/*We will continue until we find a multicast UDP
+						port that works*/
 						continue
 					}
 					defer conn.Close()
@@ -102,7 +112,18 @@ func main() {
 						fmt.Println("Fault 5: ", err2)
 						continue
 					}
+
+					/*
+						Got something interesting: someone wants to join the group.
+						How to deal with this new request?
+					*/
 					fmt.Printf("From %s Data received: %s\n", udpaddr.String(), string(buf))
+
+					/*
+						Handled the request now will will just break out of it and loop
+						throught he whole exercise to listen to the next ADD request or
+						other such request.
+					*/
 					break
 				}
 			}
