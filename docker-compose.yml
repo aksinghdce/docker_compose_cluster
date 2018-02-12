@@ -21,3 +21,11 @@ services:
     build: ./dgrepservice/.
     hostname: node4
     domainname: assignment2
+  grepservice6:
+    build: ./dgrepservice/.
+    hostname: node5
+    domainname: assignment2
+  grepservice7:
+    build: ./dgrepservice/.
+    hostname: node6
+    domainname: assignment2

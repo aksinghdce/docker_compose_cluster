@@ -61,6 +61,22 @@ func RemoteGrep(machine string, cmd url.Values) <-chan string {
 	return c
 }
 
+/*
+Name: remoteGrep
+Input: machine's hostname to be grepped, grep command
+Output: A channel that receives remote grep output
+*/
+func RemoteMembership(machine string, cmd url.Values) <-chan string {
+	c := make(chan string)
+	go func() {
+		/*
+			Get membership list from a node that is listening on machine:8080
+		*/
+		c <- "dummy"
+	}()
+	return c
+}
+
 func ReadConfig(path string) *list.List {
 	l := list.New()
 	inFile, _ := os.Open(path)

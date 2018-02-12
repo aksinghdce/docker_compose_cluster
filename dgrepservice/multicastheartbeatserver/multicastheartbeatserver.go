@@ -1,10 +1,16 @@
 package main
 
 import (
+	"context"
 	"fmt"
+	"io/ioutil"
+	"log"
 	"net"
+	"net/http"
+	"net/url"
 	"os"
 	"strings"
+	"time"
 )
 
 /*
@@ -117,8 +123,30 @@ func main() {
 						Got something interesting: someone wants to join the group.
 						How to deal with this new request?
 					*/
-					fmt.Printf("From %s Data received: %s\n", udpaddr.String(), string(buf))
+					reportPing := fmt.Sprintf("From %s Data received: %s\n", udpaddr.String(), string(buf))
+					//strings.NewReader(cmd.Encode())
+					cmd := url.Values{}
+					cmd.Add("add", reportPing)
+					req, err := http.NewRequest("POST", "http://leader.assignment2:8080/membership/add", strings.NewReader(cmd.Encode()))
+					ctx := context.Background()
+					// Don't wait for more than a second to get the grep result from remote server
+					ctx, cancel := context.WithTimeout(ctx, time.Second)
+					defer cancel()
+					req2 := req.WithContext(ctx)
+					resp, err := http.DefaultClient.Do(req2)
+					if resp != nil {
+						defer resp.Body.Close()
+					}
+					if err != nil {
+						log.Println("ERROR: sending request to leader.assignment2")
+						return
+					}
+					body, err := ioutil.ReadAll(resp.Body)
+					if err != nil {
+						log.Fatal("Error reading response from remote")
+					}
 
+					fmt.Printf("Body:%v\n", string(body))
 					/*
 						Handled the request now will will just break out of it and loop
 						throught he whole exercise to listen to the next ADD request or
@@ -131,5 +159,4 @@ func main() {
 		}
 
 	}
-
 }

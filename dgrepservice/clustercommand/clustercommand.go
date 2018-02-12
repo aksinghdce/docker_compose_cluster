@@ -4,15 +4,15 @@ import (
 	/*My project packages are kept at /go/src/app
 	when they run inside of a docker container environment.
 	In order to use my utility packages I need to
-	import my packages like this. There is a problem that I noticed, 
+	import my packages like this. There is a problem that I noticed,
 	because app/utilities is not in the GOPATH of my windows go environment
 	I can't use the visual studio code's tools for go project management
 
 	The project packages path for docker containers is mentioned in Dockerfile*/
 	"app/utilities"
+	"context"
 	"fmt"
 	"os"
-	"context"
 )
 
 /*
@@ -28,15 +28,22 @@ func main() {
 	utilities.Log(ctx, "Client began")
 	argsWithProg := os.Args[1:]
 	if len(argsWithProg) < 2 {
-		utilities.Log(ctx,"distributedgrep <grep> <options> <pattern> <file>")
-	}
-	
-	if argsWithProg[0] != "grep" {
-		utilities.Log(ctx,"Panic: Wasn't a grep command")
+		utilities.Log(ctx, "distributedgrep <grep> <options> <pattern> <file>")
 	}
 
-	var cluster utilities.Cluster
-	//nodenames.txt is configuration file that contains the names of the nodes in the cluster
-	cluster.NewCluster("nodenames.txt")
-	fmt.Printf(cluster.Grep(argsWithProg))
+	switch {
+	case argsWithProg[0] == "grep":
+		var cluster utilities.Cluster
+		//nodenames.txt is configuration file that contains the names of the nodes in the cluster
+		cluster.NewCluster("nodenames.txt")
+		fmt.Printf(cluster.Grep(argsWithProg))
+	case argsWithProg[0] == "membership":
+		var cluster utilities.Cluster
+		//nodenames.txt is configuration file that contains the names of the nodes in the cluster
+		cluster.NewCluster("nodenames.txt")
+		fmt.Printf(cluster.Grep(argsWithProg))
+	default:
+		utilities.Log(ctx, "Panic: Wasn't a grep command")
+	}
+
 }
