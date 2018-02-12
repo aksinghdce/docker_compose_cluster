@@ -1,8 +1,83 @@
 Read a more dynamic document of this README : https://tinyurl.com/ybhw2kpc
 
+# Features
+1.Distributed grep
+2.Membership service
+
 # Distributed grep
 
 This is a Distributed Systems project developed with Docker and GoLang. The distributed service being implemented in this project is "distributedgrep" (distributed grep).
+
+# Membership service
+
+The service requires a leader to manage group membership list that reflects
+the state of the cluster. When a leader comes up it know that it has to lead
+based on its hostname.
+
+When a non-leader comes up, it tries to ping(send udp request) to the leader
+and expect to be added to the group.
+
+# TO-DO design
+
+1. Now: 
+  1. Run the leader: 
+  ```
+  > docker exec dockercomposecluster_grepservice1_1 go run ./multicastheartbeatser
+ver/multicastheartbeatserver.go
+  
+  My hostname:leader.assignment2
+  Interface: eth0
+  Interface Flag: up|broadcast|multicast
+  Network: ip
+  multicast address 0 : 224.0.0.1
+  ```
+
+  2. Run a non-leader: 
+  ```
+  docker exec dockercomposecluster_grepservice2_1 go run ./multicastheartbeatser
+ver/multicastheartbeatserver.go
+My hostname:node2.assignment2
+I am not a leader. I am too old to serve. I will just die
+  ```
+  3. Run a udp client at a non-leader
+  ```
+  docker exec dockercomposecluster_grepservice5_1 multicastheartbeater
+  ```
+  
+  The effect can be seen at the console of the multicastheartbeatserver:
+  ```
+  From 172.20.0.6:10002 Data received: 0
+Network: ip
+multicast address 0 : 224.0.0.1
+From 172.20.0.6:10002 Data received: 1
+Network: ip
+multicast address 0 : 224.0.0.1
+From 172.20.0.6:10002 Data received: 2
+Network: ip
+multicast address 0 : 224.0.0.1
+From 172.20.0.6:10002 Data received: 3
+Network: ip
+multicast address 0 : 224.0.0.1
+From 172.20.0.6:10002 Data received: 4
+Network: ip
+multicast address 0 : 224.0.0.1
+From 172.20.0.6:10002 Data received: 5
+Network: ip
+multicast address 0 : 224.0.0.1
+From 172.20.0.6:10002 Data received: 6
+Network: ip
+multicast address 0 : 224.0.0.1
+From 172.20.0.6:10002 Data received: 7
+Network: ip
+multicast address 0 : 224.0.0.1
+From 172.20.0.6:10002 Data received: 8
+Network: ip
+multicast address 0 : 224.0.0.1
+From 172.20.0.6:10002 Data received: 9
+  ```
+2. Plan:
+3. Test Plan:
+In response the leader checks if the node is a new node.
 
 ## Getting Started
 
@@ -22,6 +97,25 @@ OR
 Install older version of docker for your windows. You will be using a virtual machine hypervisor instead of using OS level container features in windows.
 
 You WILL need to install docker-compose separately after installing docker.
+
+## Manage running containers with docker-compose
+
+### To add a new container 
+In order to add a new container to the cluster we need to follow the follow steps:
+1. Run the cluster with existing configuration in daemon mode:
+```
+docker-compose up --build -d
+```
+2. Add the changes in docker-compose.yml file to reflect a new container
+```
+docker-compose up --no-recreate -d
+```
+
+You can do a 
+```
+docker-compose ps
+```
+to test whether the container got added
 
 ## Running the tests
 
