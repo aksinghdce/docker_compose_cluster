@@ -98,6 +98,25 @@ Install older version of docker for your windows. You will be using a virtual ma
 
 You WILL need to install docker-compose separately after installing docker.
 
+## Manage running containers with docker-compose
+
+### To add a new container 
+In order to add a new container to the cluster we need to follow the follow steps:
+1. Run the cluster with existing configuration in daemon mode:
+```
+docker-compose up --build -d
+```
+2. Add the changes in docker-compose.yml file to reflect a new container
+```
+docker-compose up --no-recreate -d
+```
+
+You can do a 
+```
+docker-compose ps
+```
+to test whether the container got added
+
 ## Running the tests
 
 To run the tests on the cluster please follow the following steps:
