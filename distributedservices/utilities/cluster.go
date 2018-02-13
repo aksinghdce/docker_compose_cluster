@@ -51,7 +51,7 @@ func (n *node) Membership(commandstrings []string) <-chan string {
 	}
 	v := url.Values{}
 	v.Add("membership", strings.Join(commandstrings, " "))
-	return RemoteMembership(n.hostname, v)
+	return LocalMembership(n.hostname, v)
 }
 
 /*

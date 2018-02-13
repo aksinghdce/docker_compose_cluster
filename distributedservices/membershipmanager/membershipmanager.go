@@ -1,29 +1,54 @@
 package membershipmanager
 
+import (
+	"fmt"
+)
+
 /*
 State transition scheme:
 
 State 0:
 		New Node
-		data : Constants
+		data :
+		Constants:
+			1. Leader's UDP address and port
 			Saved Context : [A Binary Tree]
 		Events:
-			1. Begin clean slate: Join group to leader
-				Source : Default
+			1. Begin clean slate
 			Actions:
-				1. Read configuration:
-				Get leader's hostname : Move to state 1 or state 2
+				Get leader's hostname and Move to state 1 or state 2
 State 1:
 		Leader Node
-		data : Constants
-			Saved Context : A Binary Tree
+		data : List of machines that are sending me heartbeats
+		Internal protocol:
+			Internal Events:
+				1. Number of machines became > 3
+				Action : Appoint the first machine in the list as the sub-tier leader
+						1. Ask new machines to heartbeat to sub-tier leader
+						2. Update local data structure to reflect which machine is the sub-tier
+						leader and what is it's assignment list.
+				2. Received request to provide membership list
+				Action : Send membership list to requesting machine or local user
+				3. One of my appointed sub-leader died
+				Action : Update internal data structure and
+					Send updates to other appointed subleaders
 		Events:
 			1. It receives a join request
-			2. It receives a leave
+				Action : Run Internal protocol : Internal event 1
+			2. It receives a leave request
+				Action : Send update to sub-leaders
 			3. It receives a heartbeatloss
+				Action : Internal protocol -> Internal event 3
 State 2:
 		Peer Node
-		data : Constants
+		Internal Protocol:
+			Internal Events:
+				1. Leader asked me to be a sub-leader
+				Action : Listen on the port number provided by the leader for heartbeats
+						from subscription list
+				2. Someone died in my subscription list
+				Action : Update internal data structure and Report to my leader
+		data :
 		Events:
 			1. default : receive and send heartbeats and report loss
 			2. It receives a leave
@@ -31,11 +56,25 @@ State 2:
 			4. Leader sent updated "new node added / "
 */
 
+type State struct {
+	currentState int8
+	/*State 0 data*/
+	leaderIp     string
+	leaderPort   int
+	managedNodes []string
+	amITheLeader bool
+}
+
 type Event interface {
 	getSource() string
 	getStimulus() string
 	getArtifact() string
 	getEvent() string
+}
+
+type InternalEvent struct {
+	state       int8
+	stateObject State
 }
 
 type AddNodeEvent struct {
@@ -65,24 +104,35 @@ membershipmanager package manages a statemachine
 The statemachine keeps the distributed cluster state
 */
 type MembershipManager interface {
+	ProcessInternalEvent(intevent InternalEvent) int
 	GetGroupInfo() []string
 	AddNodeToGroup() (error, string)
 	RemoveNodeFromGroup() (error, string)
 }
 
-type ExtendedRingManager struct {
+type MembershipTreeManager struct {
+	myLeader  string
 	groupInfo []string
 }
 
-func (erm *ExtendedRingManager) GetGroupInfo() []string {
+func (erm *MembershipTreeManager) ProcessInternalEvent(intevent InternalEvent) int {
+	fmt.Println("Internal event:", intevent)
+	if intevent.state == 0 {
+		fmt.Println("My state is:", intevent.state)
+		return 0
+	}
+	return -1
+}
+
+func (erm *MembershipTreeManager) GetGroupInfo() []string {
 	return erm.groupInfo
 }
 
-func (erm *ExtendedRingManager) AddNodeToGroup() (error, string) {
+func (erm *MembershipTreeManager) AddNodeToGroup() (error, string) {
 	return nil, "success"
 }
 
-func (erm *ExtendedRingManager) RemoveNodeFromGroup() (error, string) {
+func (erm *MembershipTreeManager) RemoveNodeFromGroup() (error, string) {
 	return nil, "success"
 }
 
@@ -93,7 +143,10 @@ GetIpAddress
 IsLeader
 CurrentTimeStamp
 */
-func GetMembershipManager(event Event) ExtendedRingManager {
-	erm := ExtendedRingManager{[]string{"amit", "kumar", "singh"}}
+func GetMembershipManager(event Event) MembershipTreeManager {
+	erm := MembershipTreeManager{
+		myLeader:  "124.0.0.1:10001",
+		groupInfo: []string{"amit", "kumar", "singh"},
+	}
 	return erm
 }

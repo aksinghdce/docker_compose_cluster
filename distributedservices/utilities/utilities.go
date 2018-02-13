@@ -69,7 +69,7 @@ Name:
 Input:
 Output:
 */
-func RemoteMembership(machine string, cmd url.Values) <-chan string {
+func LocalMembership(machine string, cmd url.Values) <-chan string {
 	c := make(chan string)
 	go func() {
 		/*

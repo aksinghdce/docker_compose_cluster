@@ -6,7 +6,8 @@ import (
 	In order to use my utility packages I need to
 	import my packages like this. There is a problem that I noticed,
 	because app/utilities is not in the GOPATH of my windows go environment
-	I can't use the visual studio code's tools for go project management
+	I can't use the visual studio code's tools for the management
+	of go project that would compile and run on linux containers
 
 	The project packages path for docker containers is mentioned in Dockerfile*/
 	"app/utilities"
@@ -41,7 +42,7 @@ func main() {
 		var cluster utilities.Cluster
 		//nodenames.txt is configuration file that contains the names of the nodes in the cluster
 		cluster.NewCluster("nodenames.txt")
-		fmt.Printf(cluster.Grep(argsWithProg))
+		fmt.Printf(cluster.Membership(argsWithProg))
 	default:
 		utilities.Log(ctx, "Panic: Wasn't a grep command")
 	}

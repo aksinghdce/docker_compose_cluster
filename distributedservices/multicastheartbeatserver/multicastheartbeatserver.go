@@ -86,6 +86,16 @@ func main() {
 
 }
 
+/*
+Specification
+
+Find out if I am not the leader node.
+If I am not the leader node I take a different course of action
+(not implemented yet)
+
+If I am the leader then I listen to pings and ask my local
+http server to update it's internal representation of cluster.
+*/
 func CatchDatagramsAndBounce(multicastaddresses []net.Addr, ifs net.Interface) {
 	/*I am the leader I will keep listening to events
 	from my group.*/
