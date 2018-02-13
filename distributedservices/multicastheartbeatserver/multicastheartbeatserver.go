@@ -1,17 +1,21 @@
-package main
+package multicastheartbeatserver
 
 import (
-	"context"
 	"fmt"
-	"io/ioutil"
-	"log"
 	"net"
-	"net/http"
-	"net/url"
 	"os"
 	"strings"
-	"time"
 )
+
+type UdpServer struct{}
+
+func (udps *UdpServer) ListenAndReport() <-chan string {
+	chout := make(chan string)
+	go func() {
+		multicastheartbeatserver(chout)
+	}()
+	return chout
+}
 
 /*
 Check generic error.
@@ -33,7 +37,7 @@ const LEADER_MULTICAST_UDP_PORT_STRING = ":10001"
 /*
 Multicast address: 172.20.0.1 ?
 */
-func main() {
+func multicastheartbeatserver(ch chan string) {
 	/*What's my hostname?
 	 */
 	hostname, err := os.Hostname()
@@ -79,7 +83,7 @@ func main() {
 				fmt.Println("Fault 1: ", err)
 				continue
 			}
-			CatchDatagramsAndBounce(multicastaddresses, ifs)
+			CatchDatagramsAndBounce(multicastaddresses, ifs, ch)
 		}
 
 	}
@@ -96,7 +100,7 @@ If I am not the leader node I take a different course of action
 If I am the leader then I listen to pings and ask my local
 http server to update it's internal representation of cluster.
 */
-func CatchDatagramsAndBounce(multicastaddresses []net.Addr, ifs net.Interface) {
+func CatchDatagramsAndBounce(multicastaddresses []net.Addr, ifs net.Interface, ch chan string) {
 	/*I am the leader I will keep listening to events
 	from my group.*/
 	for {
@@ -143,9 +147,10 @@ func CatchDatagramsAndBounce(multicastaddresses []net.Addr, ifs net.Interface) {
 
 				Send it to the http servemux
 			*/
-			reportPing := fmt.Sprintf("From %s Data received: %s\n", udpaddr.String(), string(buf))
+			ch <- string(buf)
+			//reportPing := fmt.Sprintf("From %s Data received: %s\n", udpaddr.String(), string(buf))
 			//strings.NewReader(cmd.Encode())
-			cmd := url.Values{}
+			/* cmd := url.Values{}
 			cmd.Add("add", reportPing)
 			req, err := http.NewRequest("POST", "http://leader.assignment2:8080/membership/add", strings.NewReader(cmd.Encode()))
 			ctx := context.Background()
@@ -164,9 +169,8 @@ func CatchDatagramsAndBounce(multicastaddresses []net.Addr, ifs net.Interface) {
 			body, err := ioutil.ReadAll(resp.Body)
 			if err != nil {
 				log.Fatal("Error reading response from remote")
-			}
+			} */
 
-			fmt.Printf("Body:%v\n", string(body))
 			/*
 				Handled the request now will will just break out of it and loop
 				throught he whole exercise to listen to the next ADD request or

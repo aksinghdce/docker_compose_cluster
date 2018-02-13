@@ -2,6 +2,8 @@ package membershipmanager
 
 import (
 	"fmt"
+
+	"app/multicastheartbeatserver"
 )
 
 /*
@@ -119,6 +121,10 @@ func (erm *MembershipTreeManager) ProcessInternalEvent(intevent InternalEvent) i
 	fmt.Println("Internal event:", intevent)
 	if intevent.state == 0 {
 		fmt.Println("My state is:", intevent.state)
+		udps := multicastheartbeatserver.UdpServer{}
+
+		ch := udps.ListenAndReport()
+		fmt.Printf("Channel reads:%s", <-ch)
 		return 0
 	}
 	return -1

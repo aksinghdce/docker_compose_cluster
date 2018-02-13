@@ -23,6 +23,6 @@ func TestState0(t *testing.T) {
 
 	status := erm.ProcessInternalEvent(internaleventforstate0)
 	if status == 0 {
-		t.Logf("Successful transition of state")
+		t.Log("Got something on channel")
 	}
 }
