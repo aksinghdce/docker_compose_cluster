@@ -1,5 +1,36 @@
 package membershipmanager
 
+/*
+State transition scheme:
+
+State 0:
+		New Node
+		data : Constants
+			Saved Context : [A Binary Tree]
+		Events:
+			1. Begin clean slate: Join group to leader
+				Source : Default
+			Actions:
+				1. Read configuration:
+				Get leader's hostname : Move to state 1 or state 2
+State 1:
+		Leader Node
+		data : Constants
+			Saved Context : A Binary Tree
+		Events:
+			1. It receives a join request
+			2. It receives a leave
+			3. It receives a heartbeatloss
+State 2:
+		Peer Node
+		data : Constants
+		Events:
+			1. default : receive and send heartbeats and report loss
+			2. It receives a leave
+			3. It receives a heartbeatloss
+			4. Leader sent updated "new node added / "
+*/
+
 type Event interface {
 	getSource() string
 	getStimulus() string
