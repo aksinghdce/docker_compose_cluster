@@ -12,11 +12,11 @@ func TestState0(t *testing.T) {
 	}
 
 	internaleventforstate0 := InternalEvent{
-		state:       0,
 		stateObject: state,
 	}
 
 	erm := MembershipTreeManager{
+		myState:   0,
 		myLeader:  "124.0.0.1:10001",
 		groupInfo: []string{},
 	}
@@ -24,5 +24,9 @@ func TestState0(t *testing.T) {
 	status := erm.ProcessInternalEvent(internaleventforstate0)
 	if status != "" {
 		t.Logf("Got something on channel:%s", status)
+	}
+
+	if status == "state2" {
+		t.Logf("Moving to state 2")
 	}
 }

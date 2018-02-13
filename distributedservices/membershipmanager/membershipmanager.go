@@ -75,7 +75,6 @@ type Event interface {
 }
 
 type InternalEvent struct {
-	state       int8
 	stateObject State
 }
 
@@ -113,22 +112,26 @@ type MembershipManager interface {
 }
 
 type MembershipTreeManager struct {
+	// What is my current state?
+	myState   int8
 	myLeader  string
 	groupInfo []string
 }
 
 func (erm *MembershipTreeManager) ProcessInternalEvent(intevent InternalEvent) string {
 	fmt.Println("Internal event:", intevent)
-	if intevent.state == 0 {
-		fmt.Println("My state is:", intevent.state)
+	output := ""
+	switch {
+	case erm.myState == 0:
+		fmt.Println("My state is:", erm.myState)
 		udps := multicastheartbeatserver.UdpServer{}
 
 		ch := udps.ListenAndReport()
-		output := <-ch
+		output = <-ch
 		fmt.Printf("Channel reads:%s", output)
-		return output
+		// My next state is?
 	}
-	return ""
+	return output
 }
 
 func (erm *MembershipTreeManager) GetGroupInfo() []string {
