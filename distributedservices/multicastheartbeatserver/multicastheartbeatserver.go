@@ -60,8 +60,9 @@ func multicastheartbeatserver(ch chan string) {
 					If I report about the death of a node for whom I am responsible
 						then the leader gives me more nodes to look after
 		*/
-		fmt.Printf("I am not a leader. I am too old to serve. I will just die")
-		os.Exit(0)
+		fmt.Printf("I am not a leader. I am too old to serve. I will move to state 2")
+		ch <- "state2"
+		return
 	}
 
 	/*Get all the interfaces on the machine*/

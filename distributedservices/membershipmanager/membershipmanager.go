@@ -106,7 +106,7 @@ membershipmanager package manages a statemachine
 The statemachine keeps the distributed cluster state
 */
 type MembershipManager interface {
-	ProcessInternalEvent(intevent InternalEvent) int
+	ProcessInternalEvent(intevent InternalEvent) string
 	GetGroupInfo() []string
 	AddNodeToGroup() (error, string)
 	RemoveNodeFromGroup() (error, string)
@@ -117,17 +117,18 @@ type MembershipTreeManager struct {
 	groupInfo []string
 }
 
-func (erm *MembershipTreeManager) ProcessInternalEvent(intevent InternalEvent) int {
+func (erm *MembershipTreeManager) ProcessInternalEvent(intevent InternalEvent) string {
 	fmt.Println("Internal event:", intevent)
 	if intevent.state == 0 {
 		fmt.Println("My state is:", intevent.state)
 		udps := multicastheartbeatserver.UdpServer{}
 
 		ch := udps.ListenAndReport()
-		fmt.Printf("Channel reads:%s", <-ch)
-		return 0
+		output := <-ch
+		fmt.Printf("Channel reads:%s", output)
+		return output
 	}
-	return -1
+	return ""
 }
 
 func (erm *MembershipTreeManager) GetGroupInfo() []string {
