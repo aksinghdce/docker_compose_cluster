@@ -9,14 +9,13 @@ func TestState0(t *testing.T) {
 		leaderPort:   10001,
 		managedNodes: []string{},
 		amITheLeader: false,
+		clusterMap:   nil,
 	}
 
-	internaleventforstate0 := InternalEvent{
-		stateObject: state,
-	}
+	internaleventforstate0 := InternalEvent{}
 
 	erm := MembershipTreeManager{
-		myState:   0,
+		myState:   state,
 		myLeader:  "124.0.0.1:10001",
 		groupInfo: []string{},
 	}

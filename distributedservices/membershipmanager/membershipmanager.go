@@ -21,19 +21,26 @@ State 0:
 				Get leader's hostname and Move to state 1 or state 2
 State 1:
 		Leader Node
-		data : List of machines that are sending me heartbeats
+		data :
+			1. List of machines that are sending me heartbeats
+			2. Cluster map
+			3. My leader : nil for the 124.0.0.1:10001 leader (introducer)
 		Internal protocol:
 			Internal Events:
-				1. Number of machines became > 3
-				Action : Appoint the first machine in the list as the sub-tier leader
+				0. New machine sent ping
+					Given : Number of machines currently I am heartbeating with < 3
+						Add machine as sub-leader and open a heartbeat channel with it
+					Given : Number of machines I am heartbeating with == 4
+					Action : Appoint the first machine in the list as the sub-tier leader
+						The first machine in the list will deligate to the second machine
+						in the list if the number of nodes it is managing is already 4
 						1. Ask new machines to heartbeat to sub-tier leader
+							Send sub-leader info to new machine
 						2. Update local data structure to reflect which machine is the sub-tier
-						leader and what is it's assignment list.
 				2. Received request to provide membership list
-				Action : Send membership list to requesting machine or local user
+					Action : Send membership list to requesting machine or local user
 				3. One of my appointed sub-leader died
-				Action : Update internal data structure and
-					Send updates to other appointed subleaders
+				Action : Update internal data structure and wait for orphans to ping me
 		Events:
 			1. It receives a join request
 				Action : Run Internal protocol : Internal event 1
@@ -50,7 +57,15 @@ State 2:
 						from subscription list
 				2. Someone died in my subscription list
 				Action : Update internal data structure and Report to my leader
+				3. My leader died
+				Action : Pick the next available sub-leader
+					How?
+					Answer: In the cluster map, pick the next machine that is supposed to
+					be alive. Heartbeat with it to add you and wait for the response.
+					If the heartbeat response is not received, then ping the next in the series.
 		data :
+			1. List of machines that are sending me heartbeats
+			2. Cluster map
 		Events:
 			1. default : receive and send heartbeats and report loss
 			2. It receives a leave
@@ -65,7 +80,20 @@ type State struct {
 	leaderPort   int
 	managedNodes []string
 	amITheLeader bool
+	clusterMap   map[string]string
 }
+
+/*
+Functions to change the state
+
+1. Add new node to clusterMap
+2. Remove a node from clusterMap
+3. Update last heartbeat timestamp for a node in cluster map
+4. Update my leaderIp and leaderPort
+5. Change my state
+6. Add to my managed nodes
+7. Remove from my managed nodes
+*/
 
 type Event interface {
 	getSource() string
@@ -74,9 +102,7 @@ type Event interface {
 	getEvent() string
 }
 
-type InternalEvent struct {
-	stateObject State
-}
+type InternalEvent struct{}
 
 type AddNodeEvent struct {
 	hostname  string
@@ -113,22 +139,29 @@ type MembershipManager interface {
 
 type MembershipTreeManager struct {
 	// What is my current state?
-	myState   int8
+	myState   State
 	myLeader  string
 	groupInfo []string
 }
 
-func (erm *MembershipTreeManager) ProcessInternalEvent(intevent InternalEvent) string {
-	fmt.Println("Internal event:", intevent)
+func (erm *MembershipTreeManager) ProcessInternalEvent(intev InternalEvent) string {
+	fmt.Println("internal state:", intev)
 	output := ""
 	switch {
-	case erm.myState == 0:
-		fmt.Println("My state is:", erm.myState)
+	case erm.myState.currentState == 0:
+		fmt.Println("My state is:", erm.myState.currentState)
 		udps := multicastheartbeatserver.UdpServer{}
 
 		ch := udps.ListenAndReport()
 		output = <-ch
 		fmt.Printf("Channel reads:%s", output)
+		if output == "state2" {
+			erm.myState.currentState = 2
+		} else {
+			erm.myState.currentState = 1
+			//What is my leader?
+			//Default is 124.0.0.1:10001
+		}
 		// My next state is?
 	}
 	return output
@@ -156,7 +189,7 @@ CurrentTimeStamp
 func GetMembershipManager(event Event) MembershipTreeManager {
 	erm := MembershipTreeManager{
 		myLeader:  "124.0.0.1:10001",
-		groupInfo: []string{"amit", "kumar", "singh"},
+		groupInfo: []string{},
 	}
 	return erm
 }
