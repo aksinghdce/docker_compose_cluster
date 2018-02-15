@@ -20,12 +20,9 @@ func TestState0(t *testing.T) {
 		groupInfo: []string{},
 	}
 
-	status := erm.ProcessInternalEvent(internaleventforstate0)
-	if status != "" {
-		t.Logf("Got something on channel:%s", status)
-	}
-
-	if status == "state2" {
-		t.Logf("Moving to state 2")
+	/*Processing the State0 default event must take the state to 1 or 2*/
+	erm.ProcessInternalEvent(internaleventforstate0)
+	if erm.myState.currentState == 1 || erm.myState.currentState == 2 {
+		t.Logf("Correctly transitioning from State 0 to 1 or 2")
 	}
 }

@@ -131,7 +131,7 @@ membershipmanager package manages a statemachine
 The statemachine keeps the distributed cluster state
 */
 type MembershipManager interface {
-	ProcessInternalEvent(intevent InternalEvent) string
+	ProcessInternalEvent(intevent InternalEvent)
 	GetGroupInfo() []string
 	AddNodeToGroup() (error, string)
 	RemoveNodeFromGroup() (error, string)
@@ -144,7 +144,13 @@ type MembershipTreeManager struct {
 	groupInfo []string
 }
 
-func (erm *MembershipTreeManager) ProcessInternalEvent(intev InternalEvent) string {
+func (erm *MembershipTreeManager) ProcessEventLoop(eventchannel chan InternalEvent) {
+	go func() {
+		erm.ProcessInternalEvent(<-eventchannel)
+	}()
+}
+
+func (erm *MembershipTreeManager) ProcessInternalEvent(intev InternalEvent) {
 	fmt.Println("internal state:", intev)
 	output := ""
 	switch {
@@ -164,7 +170,6 @@ func (erm *MembershipTreeManager) ProcessInternalEvent(intev InternalEvent) stri
 		}
 		// My next state is?
 	}
-	return output
 }
 
 func (erm *MembershipTreeManager) GetGroupInfo() []string {
