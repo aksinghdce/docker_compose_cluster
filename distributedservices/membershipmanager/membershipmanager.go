@@ -2,6 +2,7 @@ package membershipmanager
 
 import (
 	"fmt"
+	"time"
 
 	"app/multicastheartbeatserver"
 )
@@ -131,6 +132,7 @@ membershipmanager package manages a statemachine
 The statemachine keeps the distributed cluster state
 */
 type MembershipManager interface {
+	BeginInState0()
 	ProcessInternalEvent(intevent InternalEvent)
 	GetGroupInfo() []string
 	AddNodeToGroup() (error, string)
@@ -144,32 +146,18 @@ type MembershipTreeManager struct {
 	groupInfo []string
 }
 
-func (erm *MembershipTreeManager) ProcessEventLoop(eventchannel chan InternalEvent) {
-	go func() {
-		erm.ProcessInternalEvent(<-eventchannel)
-	}()
-}
-
 func (erm *MembershipTreeManager) ProcessInternalEvent(intev InternalEvent) {
 	fmt.Println("internal state:", intev)
-	output := ""
-	switch {
-	case erm.myState.currentState == 0:
-		fmt.Println("My state is:", erm.myState.currentState)
-		udps := multicastheartbeatserver.UdpServer{}
-
-		ch := udps.ListenAndReport()
-		output = <-ch
-		fmt.Printf("Channel reads:%s", output)
-		if output == "state2" {
-			erm.myState.currentState = 2
-		} else {
-			erm.myState.currentState = 1
-			//What is my leader?
-			//Default is 124.0.0.1:10001
-		}
-		// My next state is?
+	ch := make(chan string)
+	go multicastheartbeatserver.CatchDatagramsAndBounce(ch)
+	select {
+	case s := <-ch:
+		fmt.Printf("Received %s", s)
+		erm.myState.currentState = 1
+	case <-time.After(3 * time.Second):
+		fmt.Println("Timeout in 3 seconds")
 	}
+
 }
 
 func (erm *MembershipTreeManager) GetGroupInfo() []string {
@@ -191,10 +179,10 @@ GetIpAddress
 IsLeader
 CurrentTimeStamp
 */
-func GetMembershipManager(event Event) MembershipTreeManager {
-	erm := MembershipTreeManager{
-		myLeader:  "124.0.0.1:10001",
-		groupInfo: []string{},
-	}
+func NewMembershipManager(state State, leader string) *MembershipTreeManager {
+	erm := new(MembershipTreeManager)
+	erm.myState = state
+	erm.myLeader = leader
+	erm.groupInfo = []string{}
 	return erm
 }
