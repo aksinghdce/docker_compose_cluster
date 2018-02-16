@@ -15,20 +15,17 @@ func TestState0(t *testing.T) {
 	}
 
 	mmm := NewMembershipManager(state, "224.0.1.1")
-	internaleventforstate0 := InternalEvent{}
-
-	// erm := MembershipTreeManager{
-	// 	myState:   state,
-	// 	myLeader:  "124.0.0.1:10001",
-	// 	groupInfo: []string{},
-	// }
-
-	/*Processing the State0 default event must take the state to 1 or 2*/
-	mmm.ProcessInternalEvent(internaleventforstate0)
 	if mmm.myState.currentState == 1 {
 		t.Logf("successfully changed state")
 	} else {
 		t.Fatalf("State not changed")
 	}
+
+	internaleventforstate0 := InternalEvent{}
+
+	/*Processing the State0 default event must take the state to 1 or 2*/
+	mmm.ProcessInternalEvent(internaleventforstate0)
+	/*Test whether the groupInfo grew in size
+	 */
 
 }

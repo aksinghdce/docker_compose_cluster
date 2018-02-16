@@ -1,8 +1,10 @@
 package multicastheartbeatserver
 
 import (
+	"bytes"
 	"fmt"
 	"net"
+	"strings"
 )
 
 /*
@@ -45,8 +47,12 @@ func CatchDatagramsAndBounce(c chan string) {
 			fmt.Println("Fault 5: ", err2)
 		}
 		//fmt.Printf("Received from udp client: %s", string(buf))
+		buf = bytes.Trim(buf, "\n")
 		output := string(buf)
-		output += udpadd.String()
+		output = strings.Trim(output, "\n")
+		udpaddstr := udpadd.String()
+		udpaddstr = strings.Trim(udpaddstr, "\n")
+		output += udpaddstr
 		c <- output
 	}
 }

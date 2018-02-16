@@ -2,6 +2,7 @@ package membershipmanager
 
 import (
 	"fmt"
+	"os"
 	"time"
 
 	"app/multicastheartbeatserver"
@@ -13,6 +14,7 @@ State transition scheme:
 State 0:
 		New Node
 		data :
+		Environment: hostname, ip and port for multicast
 		Constants:
 			1. Leader's UDP address and port
 			Saved Context : [A Binary Tree]
@@ -23,9 +25,14 @@ State 0:
 State 1:
 		Leader Node
 		data :
-			1. List of machines that are sending me heartbeats
-			2. Cluster map
-			3. My leader : nil for the 124.0.0.1:10001 leader (introducer)
+			1. List of machines that are sending me "add" request
+				I add it to the group and send the result to my three successors
+			2. List of machines that are sending me heartbeats
+				I check whether they are in my group list, update their timestamp
+				If they are not in my group, then ignore the heartbeat
+			3. Cluster map
+				List in step 1, my predecessors and my successors.
+			4. My leader : nil for the 124.0.0.1:10001 leader (introducer)
 		Internal protocol:
 			Internal Events:
 				0. New machine sent ping
@@ -50,7 +57,7 @@ State 1:
 			3. It receives a heartbeatloss
 				Action : Internal protocol -> Internal event 3
 State 2:
-		Peer Node
+		Peer Node asking to join
 		Internal Protocol:
 			Internal Events:
 				1. Leader asked me to be a sub-leader
@@ -72,6 +79,10 @@ State 2:
 			2. It receives a leave
 			3. It receives a heartbeatloss
 			4. Leader sent updated "new node added / "
+State 3:
+		A group member doing it's usual heartbeats
+		Report missed heartbeats to subscribers
+
 */
 
 type State struct {
@@ -105,34 +116,11 @@ type Event interface {
 
 type InternalEvent struct{}
 
-type AddNodeEvent struct {
-	hostname  string
-	ipAddress string
-	timeStamp string
-}
-
-func (ane *AddNodeEvent) getSource() string {
-	return ane.hostname
-}
-
-func (ane *AddNodeEvent) getStimulus() string {
-	return ane.ipAddress
-}
-
-func (ane *AddNodeEvent) getArtifact() string {
-	return ane.timeStamp
-}
-
-func (AddNodeEvent *AddNodeEvent) getEvent() string {
-	return "event 1"
-}
-
 /*
 membershipmanager package manages a statemachine
 The statemachine keeps the distributed cluster state
 */
 type MembershipManager interface {
-	BeginInState0()
 	ProcessInternalEvent(intevent InternalEvent)
 	GetGroupInfo() []string
 	AddNodeToGroup() (error, string)
@@ -150,38 +138,29 @@ func (erm *MembershipTreeManager) ProcessInternalEvent(intev InternalEvent) {
 	fmt.Println("internal state:", intev)
 	ch := make(chan string)
 	go multicastheartbeatserver.CatchDatagramsAndBounce(ch)
-	select {
-	case s := <-ch:
-		fmt.Printf("Received %s", s)
-		erm.myState.currentState = 1
-	case <-time.After(3 * time.Second):
-		fmt.Println("Timeout in 3 seconds")
+	for {
+		select {
+		case s := <-ch:
+			fmt.Println("Received:\n", s)
+			erm.myState.currentState = 1
+		case <-time.After(3 * time.Second):
+			fmt.Println("Timeout in 3 seconds")
+		}
 	}
-
 }
 
-func (erm *MembershipTreeManager) GetGroupInfo() []string {
-	return erm.groupInfo
-}
-
-func (erm *MembershipTreeManager) AddNodeToGroup() (error, string) {
-	return nil, "success"
-}
-
-func (erm *MembershipTreeManager) RemoveNodeFromGroup() (error, string) {
-	return nil, "success"
-}
-
-/*
-Identity is an interface that prvides the following methods
-GetHostname
-GetIpAddress
-IsLeader
-CurrentTimeStamp
-*/
 func NewMembershipManager(state State, leader string) *MembershipTreeManager {
 	erm := new(MembershipTreeManager)
 	erm.myState = state
+	hostname, err := os.Hostname()
+	if err != nil {
+		fmt.Println("Error getting hostname")
+	}
+	if hostname == "leader.assignment2" {
+		erm.myState.currentState = 1
+	} else {
+		erm.myState.currentState = 2
+	}
 	erm.myLeader = leader
 	erm.groupInfo = []string{}
 	return erm
