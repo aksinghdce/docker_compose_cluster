@@ -130,7 +130,6 @@ type MembershipManager interface {
 type MembershipTreeManager struct {
 	// What is my current state?
 	myState   State
-	myLeader  string
 	groupInfo []string
 }
 
@@ -143,12 +142,14 @@ func (erm *MembershipTreeManager) ProcessInternalEvent(intev InternalEvent) {
 		case s := <-ch:
 			fmt.Println("Received:\n", s)
 		default:
+			// Do other activities like sending membership
+			// heartbeats to successors in the circle
 			time.Sleep(1 * time.Second)
 		}
 	}
 }
 
-func NewMembershipManager(state State, leader string) *MembershipTreeManager {
+func NewMembershipManager(state State) *MembershipTreeManager {
 	erm := new(MembershipTreeManager)
 	erm.myState = state
 	hostname, err := os.Hostname()
@@ -160,7 +161,36 @@ func NewMembershipManager(state State, leader string) *MembershipTreeManager {
 	} else {
 		erm.myState.currentState = 2
 	}
-	erm.myLeader = leader
 	erm.groupInfo = []string{}
 	return erm
 }
+/*
+func (erm *MembershipTreeManager) SendAddRequest() {
+	if erm.myState.currentState == 2 {
+		leaderIpAddress := erm.myState.leaderIp + ":" + erm.myState.leaderPort
+		ServerAddr, err := net.ResolveUDPAddr("udp", leaderIpAddress)
+		CheckError(err)
+
+		LocalAddr, err := net.ResolveUDPAddr("udp", "")
+		CheckError(err)
+		fmt.Println("Localaddress:", LocalAddr.String())
+		Conn, err := net.DialUDP("udp", LocalAddr, ServerAddr)
+		CheckError(err)
+
+		defer Conn.Close()
+		i := 0
+		for {
+			msg := strconv.Itoa(i)
+			i++
+			msg += "add"
+			buf := []byte(msg)
+			_, err := Conn.Write(buf)
+			if err != nil {
+				fmt.Println(msg, err)
+			}
+			time.Sleep(time.Second * 1)
+		}
+	}
+
+}
+*/
