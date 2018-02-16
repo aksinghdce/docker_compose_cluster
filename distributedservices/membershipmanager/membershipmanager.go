@@ -142,9 +142,8 @@ func (erm *MembershipTreeManager) ProcessInternalEvent(intev InternalEvent) {
 		select {
 		case s := <-ch:
 			fmt.Println("Received:\n", s)
-			erm.myState.currentState = 1
-		case <-time.After(3 * time.Second):
-			fmt.Println("Timeout in 3 seconds")
+		default:
+			time.Sleep(1 * time.Second)
 		}
 	}
 }
