@@ -6,6 +6,7 @@ import (
 	"os"
 	"time"
 
+	"app/multicastheartbeater"
 	"app/multicastheartbeatserver"
 )
 
@@ -154,27 +155,31 @@ This hashtable is used to construct a sorted
 list with ip addresses
 */
 func (erm *MembershipTreeManager) ProcessInternalEvent(intev InternalEvent) {
-	if erm.myState.currentState != 1 {
-		fmt.Println("Incorrect state")
-		return
-	}
-	fmt.Println("internal state:", intev)
-	ch := make(chan utilities.HeartBeatUpperStack)
-	go multicastheartbeatserver.CatchDatagramsAndBounce(ch)
-	timeout := time.After(10 * time.Second)
-	for {
-		select {
-		case s := <-ch:
-			//fmt.Println("Received:\n", s)
-			fmt.Printf("Received upper stack:%v\n", s)
-		case <-timeout:
-			fmt.Printf("This function runs for 10 seconds only")
-			return
-		default:
-			// Do other activities like sending membership
-			// heartbeats to successors in the circle
+	switch {
+	case erm.myState.currentState == 1:
+		fmt.Println("internal state:", intev)
+		ch := make(chan utilities.HeartBeatUpperStack)
+		go multicastheartbeatserver.CatchDatagramsAndBounce(ch)
+		timeout := time.After(10 * time.Second)
+		for {
+			select {
+			case s := <-ch:
+				//fmt.Println("Received:\n", s)
+				fmt.Printf("Received upper stack:%v\n", s)
+			case <-timeout:
+				fmt.Printf("This function runs for 10 seconds only")
+				return
+			default:
+				// Do other activities like sending membership
+				// heartbeats to successors in the circle
 
+				time.Sleep(1 * time.Second)
+			}
+		}
+	case erm.myState.currentState == 2:
+		for {
 			time.Sleep(1 * time.Second)
+			multicastheartbeater.SendHeartBeatMessages("224.0.0.1", "10001", "10002")
 		}
 	}
 }

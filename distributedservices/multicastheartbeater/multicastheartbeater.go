@@ -1,4 +1,4 @@
-package main
+package multicastheartbeater
 
 import (
 	"app/utilities"
@@ -21,11 +21,16 @@ func CheckError(err error) {
 	}
 }
 
-func main() {
-	ServerAddr, err := net.ResolveUDPAddr("udp", Leaderaddress)
+func SendHeartBeatMessages(toAddress, toPort, fromPort string) {
+	var LeaderAddress string
+	LeaderAddress = toAddress
+	LeaderAddress += ":"
+	LeaderAddress += toPort
+	SenderPort := ":" + fromPort
+	ServerAddr, err := net.ResolveUDPAddr("udp", LeaderAddress)
 	CheckError(err)
 
-	LocalAddr, err := net.ResolveUDPAddr("udp", ":10002")
+	LocalAddr, err := net.ResolveUDPAddr("udp", SenderPort)
 	CheckError(err)
 
 	Conn, err := net.DialUDP("udp", LocalAddr, ServerAddr)
