@@ -21,42 +21,43 @@ func CheckError(err error) {
 	}
 }
 
-func SendHeartBeatMessages(toAddress, toPort, fromPort string) {
-	var LeaderAddress string
-	LeaderAddress = toAddress
-	LeaderAddress += ":"
-	LeaderAddress += toPort
-	SenderPort := ":" + fromPort
-	ServerAddr, err := net.ResolveUDPAddr("udp", LeaderAddress)
-	CheckError(err)
+func SendHeartBeatMessages(toAddress, toPort, fromPort string) chan utilities.HeartBeat {
+	heartbeatChannelIn := make(chan utilities.HeartBeat)
+	go func() {
+		var LeaderAddress string
+		LeaderAddress = toAddress
+		LeaderAddress += ":"
+		LeaderAddress += toPort
+		SenderPort := ":" + fromPort
+		ServerAddr, err := net.ResolveUDPAddr("udp", LeaderAddress)
+		CheckError(err)
 
-	LocalAddr, err := net.ResolveUDPAddr("udp", SenderPort)
-	CheckError(err)
+		LocalAddr, err := net.ResolveUDPAddr("udp", SenderPort)
+		CheckError(err)
 
-	Conn, err := net.DialUDP("udp", LocalAddr, ServerAddr)
-	CheckError(err)
+		Conn, err := net.DialUDP("udp", LocalAddr, ServerAddr)
+		CheckError(err)
 
-	defer Conn.Close()
+		defer Conn.Close()
 
-	i := 0
-	for {
-		msg := strconv.Itoa(i)
-		_ = msg
-		i++
+		i := 0
+		for {
+			msg := strconv.Itoa(i)
+			_ = msg
+			i++
 
-		hb := utilities.HeartBeat{
-			ReqNumber: 12345,
-			ReqCode:   5,
+			hb := <-heartbeatChannelIn
+			//encode json data
+			fmt.Printf("Data to be Sent:%v\n", hb)
+			jsonData, err := json.Marshal(hb)
+			fmt.Printf("Marshalled Data:%v\n", string(jsonData))
+			n, err := Conn.Write(jsonData)
+			if err != nil {
+				fmt.Println(msg, err)
+			}
+			fmt.Printf("Wrote %d bytes\n", n)
+			time.Sleep(time.Second * 1)
 		}
-		//encode json data
-		fmt.Printf("Data to be Sent:%v\n", hb)
-		jsonData, err := json.Marshal(hb)
-		fmt.Printf("Marshalled Data:%v\n", string(jsonData))
-		n, err := Conn.Write(jsonData)
-		if err != nil {
-			fmt.Println(msg, err)
-		}
-		fmt.Printf("Wrote %d bytes\n", n)
-		time.Sleep(time.Second * 1)
-	}
+	}()
+	return heartbeatChannelIn
 }

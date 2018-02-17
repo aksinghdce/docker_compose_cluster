@@ -3,6 +3,7 @@ package membershipmanager
 import (
 	"app/utilities"
 	"fmt"
+	"math/rand"
 	"os"
 	"time"
 
@@ -177,9 +178,25 @@ func (erm *MembershipTreeManager) ProcessInternalEvent(intev InternalEvent) {
 			}
 		}
 	case erm.myState.currentState == 2:
+		r := rand.New(rand.NewSource(99))
+		timeout := time.After(15 * time.Second)
+		heartbeatChannelOut := multicastheartbeater.SendHeartBeatMessages("224.0.0.1", "10001", "10002")
+
 		for {
-			time.Sleep(1 * time.Second)
-			multicastheartbeater.SendHeartBeatMessages("224.0.0.1", "10001", "10002")
+			hbMessage := utilities.HeartBeat{
+				Cluster:   []string{"amit", "kumar", "singh"},
+				ReqNumber: r.Int63(),
+				ReqCode:   5,
+			}
+
+			select {
+			case <-timeout:
+				fmt.Printf("INFO:Send heartbeats for 15 minutes")
+				break
+			default:
+				time.Sleep(1 * time.Second)
+				heartbeatChannelOut <- hbMessage
+			}
 		}
 	}
 }

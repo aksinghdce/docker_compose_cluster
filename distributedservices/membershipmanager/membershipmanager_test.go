@@ -1,6 +1,7 @@
 package membershipmanager
 
 import (
+	"os"
 	"testing"
 )
 
@@ -32,22 +33,57 @@ func TestState0(t *testing.T) {
 }
 
 func TestState1(t *testing.T) {
-	state := State{
-		currentState: 1,
-		leaderIp:     "124.0.0.1",
-		leaderPort:   10001,
-		managedNodes: []string{},
-		amITheLeader: false,
-		clusterMap:   nil,
+	hostname, err := os.Hostname()
+	if err != nil {
+		t.Errorf("Error Hostname Resolution: %s", err.Error())
+	}
+	if hostname != "leader.assignment2" {
+		t.Logf("This Machine is not in State 1")
+	} else {
+		state := State{
+			currentState: 1,
+			leaderIp:     "124.0.0.1",
+			leaderPort:   10001,
+			managedNodes: []string{},
+			amITheLeader: false,
+			clusterMap:   nil,
+		}
+
+		mmm := NewMembershipManager(state)
+
+		internaleventforstate0 := InternalEvent{}
+
+		/*Processing the State0 default event must take the state to 1 or 2*/
+		/*The following is an infinite loop*/
+		mmm.ProcessInternalEvent(internaleventforstate0)
+		/*Test whether the groupInfo grew in size
+		 */
 	}
 
-	mmm := NewMembershipManager(state)
+}
 
-	internaleventforstate0 := InternalEvent{}
+func TestState2(t *testing.T) {
+	hostname, err := os.Hostname()
+	if err != nil {
+		t.Errorf("Error Hostname Resolution: %s", err.Error())
+	}
+	if hostname != "leader.assignment2" {
 
-	/*Processing the State0 default event must take the state to 1 or 2*/
-	/*The following is an infinite loop*/
-	mmm.ProcessInternalEvent(internaleventforstate0)
-	/*Test whether the groupInfo grew in size
-	 */
+		state := State{
+			currentState: 2,
+			leaderIp:     "124.0.0.1",
+			leaderPort:   10001,
+			managedNodes: []string{},
+			amITheLeader: false,
+			clusterMap:   nil,
+		}
+
+		mmm := NewMembershipManager(state)
+
+		internaleventforstate0 := InternalEvent{}
+
+		mmm.ProcessInternalEvent(internaleventforstate0)
+
+	}
+
 }

@@ -20,6 +20,7 @@ Heartbeat packet
 But we might want to know the hostname
 */
 type HeartBeat struct {
+	Cluster   []string
 	ReqNumber int64
 	ReqCode   int8
 }
