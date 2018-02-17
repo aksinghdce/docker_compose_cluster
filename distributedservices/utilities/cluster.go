@@ -6,6 +6,29 @@ import (
 	"strings"
 )
 
+/*
+Leader wants to listen on this port for heartbeats
+And listen to serious data and control requests on
+TCP protocol 8080
+*/
+const LEADER_MULTICAST_UDP_PORT_STRING = ":10001"
+
+/*The machine and port is already available
+to us when we read from the UDP connection
+no need to have that information in the
+Heartbeat packet
+But we might want to know the hostname
+*/
+type HeartBeat struct {
+	ReqNumber int64
+	ReqCode   int8
+}
+
+type HeartBeatUpperStack struct {
+	Ip string
+	Hb HeartBeat
+}
+
 type node struct {
 	hostname string
 }

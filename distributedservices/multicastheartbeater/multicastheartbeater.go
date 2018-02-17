@@ -1,6 +1,8 @@
 package main
 
 import (
+	"app/utilities"
+	"encoding/json"
 	"fmt"
 	"net"
 	"os"
@@ -30,15 +32,26 @@ func main() {
 	CheckError(err)
 
 	defer Conn.Close()
+
 	i := 0
 	for {
 		msg := strconv.Itoa(i)
+		_ = msg
 		i++
-		buf := []byte(msg)
-		_, err := Conn.Write(buf)
+
+		hb := utilities.HeartBeat{
+			ReqNumber: 12345,
+			ReqCode:   5,
+		}
+		//encode json data
+		fmt.Printf("Data to be Sent:%v\n", hb)
+		jsonData, err := json.Marshal(hb)
+		fmt.Printf("Marshalled Data:%v\n", string(jsonData))
+		n, err := Conn.Write(jsonData)
 		if err != nil {
 			fmt.Println(msg, err)
 		}
+		fmt.Printf("Wrote %d bytes\n", n)
 		time.Sleep(time.Second * 1)
 	}
 }

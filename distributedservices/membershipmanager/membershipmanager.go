@@ -1,6 +1,7 @@
 package membershipmanager
 
 import (
+	"app/utilities"
 	"fmt"
 	"os"
 	"time"
@@ -133,17 +134,46 @@ type MembershipTreeManager struct {
 	groupInfo []string
 }
 
+/*
+Specification:
+
+Input: InternalEvent is for future use only.
+Output:
+Processing:
+The function runs in State 1 only
+Receives all the udp datagrams received on
+multicast ip address to receive add request
+
+Keeps the add requests in a hashtable
+the hash function hashes the ip address.
+
+The hashtable is updating constantly with the last
+time of packet arrival
+
+This hashtable is used to construct a sorted
+list with ip addresses
+*/
 func (erm *MembershipTreeManager) ProcessInternalEvent(intev InternalEvent) {
+	if erm.myState.currentState != 1 {
+		fmt.Println("Incorrect state")
+		return
+	}
 	fmt.Println("internal state:", intev)
-	ch := make(chan string)
+	ch := make(chan utilities.HeartBeatUpperStack)
 	go multicastheartbeatserver.CatchDatagramsAndBounce(ch)
+	timeout := time.After(10 * time.Second)
 	for {
 		select {
 		case s := <-ch:
-			fmt.Println("Received:\n", s)
+			//fmt.Println("Received:\n", s)
+			fmt.Printf("Received upper stack:%v\n", s)
+		case <-timeout:
+			fmt.Printf("This function runs for 10 seconds only")
+			return
 		default:
 			// Do other activities like sending membership
 			// heartbeats to successors in the circle
+
 			time.Sleep(1 * time.Second)
 		}
 	}
@@ -164,6 +194,7 @@ func NewMembershipManager(state State) *MembershipTreeManager {
 	erm.groupInfo = []string{}
 	return erm
 }
+
 /*
 func (erm *MembershipTreeManager) SendAddRequest() {
 	if erm.myState.currentState == 2 {
