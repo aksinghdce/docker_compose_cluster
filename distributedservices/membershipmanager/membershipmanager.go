@@ -149,7 +149,7 @@ func GetInstance() *MManagerSingleton {
 				AmITheLeader: false,
 				ClusterMap:   make(map[string]utilities.HeartBeat),
 			},
-			GroupInfo: []string{},
+			GroupInfo: nil,
 		}
 
 		hostname, err := os.Hostname()
@@ -167,7 +167,13 @@ func GetInstance() *MManagerSingleton {
 
 func (erm *MManagerSingleton) AddNodeToGroup(hbu utilities.HeartBeatUpperStack) error {
 	erm.MyState.ClusterMap[hbu.Ip] = hbu.Hb
-	fmt.Printf("State:%v\n", erm.MyState)
+	//fmt.Printf("State:%v\n", erm.MyState)
+	nodeList := make([]string, 5, 30)
+	for ip, _ := range erm.MyState.ClusterMap {
+		nodeList = append(nodeList, ip)
+	}
+	erm.GroupInfo = nodeList
+	fmt.Printf("GroupInfo:%v\n", erm.GroupInfo)
 	return nil
 }
 
