@@ -184,6 +184,9 @@ func (erm *MembershipTreeManager) ProcessInternalEvent(intev InternalEvent) {
 		/*
 		 */
 		r := rand.New(rand.NewSource(99))
+		/*SendHeartBeatMessages returns a channel in which you can write your heartbeat messages
+		 */
+		// Send Add requests to the Listener node. Listener node listens on multicast address 224.0.0.1:10001
 		heartbeatChannelOut := multicastheartbeater.SendHeartBeatMessages("224.0.0.1", "10001", "10002")
 
 		ch := make(chan utilities.HeartBeatUpperStack)

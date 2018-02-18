@@ -49,10 +49,11 @@ func TestCommandHandler(t *testing.T) {
 }
 
 func TestRouting(t *testing.T) {
-	s := httptest.NewServer(handler())
+	h := handler()
+	s := httptest.NewServer(h)
 	defer s.Close()
 
-	res, err := http.Get(fmt.Sprintf("%s/grep", s.URL))
+	res, err := http.Get(fmt.Sprintf("%s/membership/add", s.URL))
 	if err != nil {
 		t.Fatalf("could not send Get request %v", err)
 	}
@@ -60,5 +61,4 @@ func TestRouting(t *testing.T) {
 	if res.StatusCode != http.StatusOK {
 		t.Errorf("expected StatusOK got %v", res.Status)
 	}
-
 }
