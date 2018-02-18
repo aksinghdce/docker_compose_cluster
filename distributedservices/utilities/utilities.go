@@ -44,14 +44,12 @@ func RemoteGrep(machine string, cmd url.Values) <-chan string {
 		defer cancel()
 		req2 := req.WithContext(ctx)
 		resp, err := http.DefaultClient.Do(req2)
-		if resp != nil {
-			defer resp.Body.Close()
-		}
 		if err != nil {
 			log.Println("ERROR: sending request to remote http server", machine)
 			c <- "Error connecting to remote host"
 			return
 		}
+		defer resp.Body.Close()
 		body, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
 			log.Fatal("Error reading response from remote")

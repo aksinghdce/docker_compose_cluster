@@ -2,6 +2,7 @@ package membershipmanager
 
 import (
 	"app/utilities"
+	"context"
 	"fmt"
 	"math/rand"
 	"os"
@@ -89,13 +90,14 @@ State 3:
 */
 
 type State struct {
-	currentState int8
+	CurrentState int8
 	/*State 0 data*/
-	leaderIp     string
-	leaderPort   int
-	managedNodes []string
-	amITheLeader bool
-	clusterMap   map[string]string
+	LeaderIp       string
+	LeaderPort     int
+	ManagedNodes   []string
+	AmITheLeader   bool
+	ClusterMap     map[string]string
+	RequestContext context.Context
 }
 
 /*
@@ -157,7 +159,7 @@ list with ip addresses
 */
 func (erm *MembershipTreeManager) ProcessInternalEvent(intev InternalEvent) {
 	switch {
-	case erm.myState.currentState == 1:
+	case erm.myState.CurrentState == 1:
 		fmt.Println("internal state:", intev)
 		ch := make(chan utilities.HeartBeatUpperStack)
 		// For "Add to the group" requests membership service of state 1 listens
@@ -180,7 +182,7 @@ func (erm *MembershipTreeManager) ProcessInternalEvent(intev InternalEvent) {
 				time.Sleep(1 * time.Second)
 			}
 		}
-	case erm.myState.currentState == 2:
+	case erm.myState.CurrentState == 2:
 		/*
 		 */
 		r := rand.New(rand.NewSource(99))
@@ -227,9 +229,9 @@ func NewMembershipManager(state State) *MembershipTreeManager {
 		fmt.Println("Error getting hostname")
 	}
 	if hostname == "leader.assignment2" {
-		erm.myState.currentState = 1
+		erm.myState.CurrentState = 1
 	} else {
-		erm.myState.currentState = 2
+		erm.myState.CurrentState = 2
 	}
 	erm.groupInfo = []string{}
 	return erm

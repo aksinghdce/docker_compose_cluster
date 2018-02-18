@@ -70,12 +70,13 @@ func TestState2(t *testing.T) {
 	if hostname != "leader.assignment2" {
 
 		state := State{
-			currentState: 2,
-			leaderIp:     "124.0.0.1",
-			leaderPort:   10001,
-			managedNodes: []string{},
-			amITheLeader: false,
-			clusterMap:   nil,
+			CurrentState:   2,
+			LeaderIp:       "124.0.0.1",
+			LeaderPort:     10001,
+			ManagedNodes:   []string{},
+			AmITheLeader:   false,
+			ClusterMap:     nil,
+			RequestContext: nil,
 		}
 
 		mmm := NewMembershipManager(state)

@@ -107,7 +107,7 @@ func (c *Cluster) NewCluster(configFileName string) {
 	// Iterate through list and print its contents.
 	for e := l.Front(); e != nil; e = e.Next() {
 		if str, ok := e.Value.(string); ok {
-			node := node{hostname: str}
+			node := node{hostname: strings.Trim(str, "\n")}
 			c.nodes = append(c.nodes, node)
 		} else {
 			log.Fatal("The server names file doesn't have strings")
