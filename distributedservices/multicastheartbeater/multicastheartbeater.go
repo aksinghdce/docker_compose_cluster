@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net"
 	"os"
-	"strconv"
 	"time"
 )
 
@@ -21,6 +20,12 @@ func CheckError(err error) {
 	}
 }
 
+/*
+Specification:
+Returns a channel of utilities.HeartBeat
+The caller can read heartbeats on this channel at the speed that UDP
+provides; with a time lag associated with go channels
+*/
 func SendHeartBeatMessages(toAddress, toPort, fromPort string) chan utilities.HeartBeat {
 	heartbeatChannelIn := make(chan utilities.HeartBeat)
 	go func() {
@@ -31,31 +36,22 @@ func SendHeartBeatMessages(toAddress, toPort, fromPort string) chan utilities.He
 		SenderPort := ":" + fromPort
 		ServerAddr, err := net.ResolveUDPAddr("udp", LeaderAddress)
 		CheckError(err)
-
 		LocalAddr, err := net.ResolveUDPAddr("udp", SenderPort)
 		CheckError(err)
-
 		Conn, err := net.DialUDP("udp", LocalAddr, ServerAddr)
 		CheckError(err)
-
 		defer Conn.Close()
-
-		i := 0
 		for {
-			msg := strconv.Itoa(i)
-			_ = msg
-			i++
-
 			hb := <-heartbeatChannelIn
 			//encode json data
-			fmt.Printf("Data to be Sent:%v\n", hb)
+			//fmt.Printf("Data to be Sent:%v\n", hb)
 			jsonData, err := json.Marshal(hb)
-			fmt.Printf("Marshalled Data:%v\n", string(jsonData))
-			n, err := Conn.Write(jsonData)
+			//fmt.Printf("Marshalled Data:%v\n", string(jsonData))
+			_, err = Conn.Write(jsonData)
 			if err != nil {
-				fmt.Println(msg, err)
+				fmt.Println(err.Error())
 			}
-			fmt.Printf("Wrote %d bytes\n", n)
+			//fmt.Printf("Wrote %d bytes\n", n)
 			time.Sleep(time.Second * 1)
 		}
 	}()

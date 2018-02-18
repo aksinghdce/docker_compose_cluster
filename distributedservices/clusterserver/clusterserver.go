@@ -24,19 +24,12 @@ func main() {
 	utilities.Log(ctx, startTime.String())
 
 	go func() {
-
-		state := membershipmanager.State{
-			CurrentState: 0,
-			LeaderIp:     "124.0.0.1",
-			LeaderPort:   10001,
-			ManagedNodes: []string{},
-			AmITheLeader: false,
-			ClusterMap:   nil,
-		}
-
-		mmm := membershipmanager.NewMembershipManager(state)
+		mmm := membershipmanager.GetInstance()
+		//mmm := membershipmanager.NewMembershipManager(state)
 		internaleventforstate1 := membershipmanager.InternalEvent{}
 		utilities.Log(ctx, startTime.String(), "Changing State")
+		fmt.Printf("My current State:%v", mmm.MyState.CurrentState)
+		// The following function is an infinite loop in State 1 and State 2
 		mmm.ProcessInternalEvent(internaleventforstate1)
 
 	}()

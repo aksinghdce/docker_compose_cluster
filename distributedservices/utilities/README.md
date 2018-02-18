@@ -21,4 +21,5 @@ Similarly for other functions
 
 
 # Membership service functionality
-![Design of a membership service node]()
+![Design of a membership service node](![Design of Membership service](https://github.com/aksinghdce/docker_compose_cluster/blob/assignment2/doc/images/Overall%20design%20of%20membership%20service.png)
+)

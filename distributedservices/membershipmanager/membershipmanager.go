@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
+	"sync"
 	"time"
 
 	"app/multicastheartbeater"
@@ -96,7 +97,7 @@ type State struct {
 	LeaderPort     int
 	ManagedNodes   []string
 	AmITheLeader   bool
-	ClusterMap     map[string]string
+	ClusterMap     map[string]utilities.HeartBeat
 	RequestContext context.Context
 }
 
@@ -128,19 +129,48 @@ The statemachine keeps the distributed cluster state
 type MembershipManager interface {
 	ProcessInternalEvent(intevent InternalEvent)
 	GetGroupInfo() []string
-	AddNodeToGroup() (error, string)
+	AddNodeToGroup(chan utilities.HeartBeatUpperStack) error
 	RemoveNodeFromGroup() (error, string)
 }
 
-type MembershipTreeManager struct {
-	// What is my current state?
-	myState   State
-	groupInfo []string
+type MManagerSingleton struct {
+	MyState   State
+	GroupInfo []string
+}
+
+var instance *MManagerSingleton
+var once sync.Once
+
+func GetInstance() *MManagerSingleton {
+	once.Do(func() {
+		instance = &MManagerSingleton{
+			MyState: State{
+				CurrentState: 0,
+				LeaderIp:     "124.0.0.1",
+				LeaderPort:   10001,
+				ManagedNodes: []string{},
+				AmITheLeader: false,
+				ClusterMap:   nil,
+			},
+			GroupInfo: []string{},
+		}
+
+		hostname, err := os.Hostname()
+		if err != nil {
+			fmt.Println("Error getting hostname")
+		}
+		if hostname == "leader.assignment2" {
+			instance.MyState.CurrentState = 1
+		} else {
+			instance.MyState.CurrentState = 2
+		}
+	})
+	return instance
 }
 
 /*Write heartbeat*/
-func (erm *MembershipTreeManager) aggregator(hb utilities.HeartBeatUpperStack) {
-	_, ok := erm.myState.ClusterMap[hb.Ip]
+func (erm *MManagerSingleton) aggregator(hb utilities.HeartBeatUpperStack) {
+	_, ok := erm.MyState.ClusterMap[hb.Ip]
 	if ok {
 		// Populate the ClusterMap with value type as another map
 		// In the sub-map keep the latest heartbeat from the sender
@@ -150,6 +180,13 @@ func (erm *MembershipTreeManager) aggregator(hb utilities.HeartBeatUpperStack) {
 		// on the heartbeat.
 		// Make a tree diagram to illustrate a use case before coding
 	}
+}
+
+func (erm *MManagerSingleton) AddNodeToGroup(hbuc chan utilities.HeartBeatUpperStack) error {
+	heartBeatDataForAggregator := <-hbuc
+	erm.MyState.ClusterMap[heartBeatDataForAggregator.Ip] = heartBeatDataForAggregator.Hb
+	fmt.Printf("State:%v\n", erm.MyState)
+	return nil
 }
 
 /*
@@ -171,19 +208,24 @@ time of packet arrival
 This hashtable is used to construct a sorted
 list with ip addresses
 */
-func (erm *MembershipTreeManager) ProcessInternalEvent(intev InternalEvent) {
+func (erm *MManagerSingleton) ProcessInternalEvent(intev InternalEvent) {
 	switch {
-	case erm.myState.CurrentState == 1:
+	case erm.MyState.CurrentState == 1:
 		fmt.Println("internal state:", intev)
 		ch := make(chan utilities.HeartBeatUpperStack)
 		// For "Add to the group" requests membership service of state 1 listens
 		// on 224.0.0.1:10001
 		// for regular heartbeats, it must listen on it's unicast ip address
+		// A peer in State 2 will send "ADD" request on multicast address because
+		// At run time State 2 nodes only know their own ip address. Practically
+		// every node is discovering the listener. Once the listener Add's it begins receiving
+		// heartbeats from at least one node.
 		go multicastheartbeatserver.CatchMultiCastDatagramsAndBounce("224.0.0.1", "10001", ch)
 		/*Listen to Add request only for 1 second and react to it by sending the received heartbeat
 		to collector go routine.
 		*/
-		timeout := time.After(1 * time.Second)
+		timeout := time.After(10 * time.Second)
+		channelHeartbeatToAggregator := make(chan utilities.HeartBeatUpperStack)
 		for {
 			select {
 			case s := <-ch:
@@ -191,10 +233,12 @@ func (erm *MembershipTreeManager) ProcessInternalEvent(intev InternalEvent) {
 					Expect an ADD request. Invoke the aggregator's collector
 					routine to updat the internal data structures.
 				*/
-				fmt.Printf("Received upper stack:%v\n", s)
+				channelHeartbeatToAggregator <- s
+				erm.AddNodeToGroup(channelHeartbeatToAggregator)
+				//fmt.Printf("Received upper stack:%v\n", s)
 			case <-timeout:
 				/*Run State 3 go routines by populating a channel*/
-				return
+				fmt.Printf("Print the state %v\n", erm.MyState)
 			default:
 				// Do other activities like sending membership
 				// heartbeats to successors in the circle
@@ -202,21 +246,26 @@ func (erm *MembershipTreeManager) ProcessInternalEvent(intev InternalEvent) {
 				time.Sleep(1 * time.Second)
 			}
 		}
-	case erm.myState.CurrentState == 2:
-		/*
-		 */
+	case erm.MyState.CurrentState == 2:
+		/*In this state the machine send ADD request to multicast udp port for 5 seconds
+		every 100 milliseconds and then returns.
+		So, we need the caller to call this function multiple times
+		till the machine goes into State 3
+		*/
 		r := rand.New(rand.NewSource(99))
 		/*SendHeartBeatMessages returns a channel in which you can write your heartbeat messages
 		 */
-		// Send Add requests to the Listener node. Listener node listens on multicast address 224.0.0.1:10001
+		// heartbeatChannelOut is a channel of utilities.HeartBeat. It returns heartbeats received on
+		// Multicast udp port 10001. We are sending on port 10002
 		heartbeatChannelOut := multicastheartbeater.SendHeartBeatMessages("224.0.0.1", "10001", "10002")
 
-		ch := make(chan utilities.HeartBeatUpperStack)
+		// ch is a channel of utilities.HeartBeatUpperStack to listen to heartbeats on unicast
+		// udp port 10003
+		//ch := make(chan utilities.HeartBeatUpperStack)
 		// For "Add to the group" requests membership service of state 1 listens
 		// on 224.0.0.1:10001
-		// for regular heartbeats, it must listen on it's unicast ip address
-		go multicastheartbeatserver.CatchUniCastDatagramsAndBounce("10003", ch)
-		timeout := time.After(10 * time.Second)
+		//go multicastheartbeatserver.CatchUniCastDatagramsAndBounce("10003", ch)
+		timeout := time.After(5 * time.Second)
 		for {
 			/*
 				Prepare add requests to be sent to the Introducer
@@ -228,39 +277,24 @@ func (erm *MembershipTreeManager) ProcessInternalEvent(intev InternalEvent) {
 			}
 
 			select {
-			case hbRcv := <-ch:
-				fmt.Printf("Received Heartbeat:%v\n", hbRcv)
+			//case hbRcv := <-ch:
+			//	fmt.Printf("Received Heartbeat:%v\n", hbRcv)
 			case <-timeout:
-				fmt.Printf("INFO:Send heartbeats for 15 minutes")
-				return
+				// Add will be attempted for 5 seconds, every 100 milliseconds
+				fmt.Printf("INFO:time to do something else")
 			default:
-				time.Sleep(1 * time.Second)
+				// Send ADD request every 100 millisecond
+				time.Sleep(100 * time.Millisecond)
 				heartbeatChannelOut <- hbMessage
 			}
 		}
 	}
 }
 
-func NewMembershipManager(state State) *MembershipTreeManager {
-	erm := new(MembershipTreeManager)
-	erm.myState = state
-	hostname, err := os.Hostname()
-	if err != nil {
-		fmt.Println("Error getting hostname")
-	}
-	if hostname == "leader.assignment2" {
-		erm.myState.CurrentState = 1
-	} else {
-		erm.myState.CurrentState = 2
-	}
-	erm.groupInfo = []string{}
-	return erm
-}
-
 /*
-func (erm *MembershipTreeManager) SendAddRequest() {
-	if erm.myState.currentState == 2 {
-		leaderIpAddress := erm.myState.leaderIp + ":" + erm.myState.leaderPort
+func (erm *MManagerSingleton) SendAddRequest() {
+	if erm.MyState.currentState == 2 {
+		leaderIpAddress := erm.MyState.leaderIp + ":" + erm.MyState.leaderPort
 		ServerAddr, err := net.ResolveUDPAddr("udp", leaderIpAddress)
 		CheckError(err)
 
