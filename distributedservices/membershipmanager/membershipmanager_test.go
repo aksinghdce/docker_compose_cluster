@@ -51,25 +51,4 @@ func TestState2(t *testing.T) {
 	}
 
 	fmt.Printf("My hostname:%s\n", hostname)
-
-	// if hostname != "leader.assignment2" {
-
-	// 	state := State{
-	// 		CurrentState:   2,
-	// 		LeaderIp:       "124.0.0.1",
-	// 		LeaderPort:     10001,
-	// 		ManagedNodes:   []string{},
-	// 		AmITheLeader:   false,
-	// 		ClusterMap:     nil,
-	// 		RequestContext: nil,
-	// 	}
-
-	// 	mmm := NewMembershipManager(state)
-
-	// 	internaleventforstate0 := InternalEvent{}
-
-	// 	mmm.ProcessInternalEvent(internaleventforstate0)
-
-	// }
-
 }

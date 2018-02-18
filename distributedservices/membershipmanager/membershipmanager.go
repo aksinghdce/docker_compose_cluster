@@ -1,12 +1,17 @@
 package membershipmanager
 
+/*
+membershipmanager package manages a statemachine
+The statemachine keeps the distributed cluster state
+*/
+
 import (
 	"app/utilities"
 	"context"
 	"fmt"
-	"math/rand"
 	"os"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"app/multicastheartbeater"
@@ -90,6 +95,19 @@ State 3:
 
 */
 
+/*
+A counter for request numbers
+*/
+type count64 int64
+
+func (c *count64) increment() int64 {
+	return atomic.AddInt64((*int64)(c), 1)
+}
+
+func (c *count64) get() int64 {
+	return atomic.LoadInt64((*int64)(c))
+}
+
 type State struct {
 	CurrentState int8
 	/*State 0 data*/
@@ -101,31 +119,10 @@ type State struct {
 	RequestContext context.Context
 }
 
-/*
-Functions to change the state
-
-1. Add new node to clusterMap
-2. Remove a node from clusterMap
-3. Update last heartbeat timestamp for a node in cluster map
-4. Update my leaderIp and leaderPort
-5. Change my state
-6. Add to my managed nodes
-7. Remove from my managed nodes
-*/
-
-type Event interface {
-	getSource() string
-	getStimulus() string
-	getArtifact() string
-	getEvent() string
+type InternalEvent struct {
+	RequestNumber count64
 }
 
-type InternalEvent struct{}
-
-/*
-membershipmanager package manages a statemachine
-The statemachine keeps the distributed cluster state
-*/
 type MembershipManager interface {
 	ProcessInternalEvent(intevent InternalEvent)
 	GetGroupInfo() []string
@@ -168,20 +165,6 @@ func GetInstance() *MManagerSingleton {
 	return instance
 }
 
-/*Write heartbeat*/
-func (erm *MManagerSingleton) aggregator(hb utilities.HeartBeatUpperStack) {
-	_, ok := erm.MyState.ClusterMap[hb.Ip]
-	if ok {
-		// Populate the ClusterMap with value type as another map
-		// In the sub-map keep the latest heartbeat from the sender
-		// As soon as the map is added to, send the cluster map to
-		// a go routine for reacting on it. This is how
-		// receiving the heartbeats can be decoupled with reacting
-		// on the heartbeat.
-		// Make a tree diagram to illustrate a use case before coding
-	}
-}
-
 func (erm *MManagerSingleton) AddNodeToGroup(hbu utilities.HeartBeatUpperStack) error {
 	erm.MyState.ClusterMap[hbu.Ip] = hbu.Hb
 	fmt.Printf("State:%v\n", erm.MyState)
@@ -191,7 +174,7 @@ func (erm *MManagerSingleton) AddNodeToGroup(hbu utilities.HeartBeatUpperStack) 
 /*
 Specification:
 
-Input: InternalEvent is for future use only.
+Input: InternalEvent
 Output:
 Processing:
 The function runs in State 1 only
@@ -247,7 +230,6 @@ func (erm *MManagerSingleton) ProcessInternalEvent(intev InternalEvent) {
 		So, we need the caller to call this function multiple times
 		till the machine goes into State 3
 		*/
-		r := rand.New(rand.NewSource(99))
 		/*SendHeartBeatMessages returns a channel in which you can write your heartbeat messages
 		 */
 		// heartbeatChannelOut is a channel of utilities.HeartBeat. It returns heartbeats received on
@@ -266,10 +248,12 @@ func (erm *MManagerSingleton) ProcessInternalEvent(intev InternalEvent) {
 				Prepare add requests to be sent to the Introducer
 			*/
 			hbMessage := utilities.HeartBeat{
-				Cluster:   []string{"amit", "kumar", "singh"},
-				ReqNumber: r.Int63(),
-				ReqCode:   5,
+				Cluster:   []string{},
+				ReqNumber: intev.RequestNumber.get(),
+				ReqCode:   1, //1 is for ADD request
 			}
+
+			intev.RequestNumber.increment()
 
 			select {
 			//case hbRcv := <-ch:

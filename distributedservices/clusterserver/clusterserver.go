@@ -26,7 +26,9 @@ func main() {
 	go func() {
 		mmm := membershipmanager.GetInstance()
 		//mmm := membershipmanager.NewMembershipManager(state)
-		internaleventforstate1 := membershipmanager.InternalEvent{}
+		internaleventforstate1 := membershipmanager.InternalEvent{
+			RequestNumber: 1,
+		}
 		utilities.Log(ctx, startTime.String(), "Changing State")
 		utilities.Log(ctx, startTime.String(), "My current State:", string(mmm.MyState.CurrentState))
 		// The following function is an infinite loop in State 1 and State 2
