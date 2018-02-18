@@ -32,40 +32,16 @@ func TestState1(t *testing.T) {
 	}
 	if hostname != "leader.assignment2" {
 		t.Logf("This Machine is not in State 1, hostname:%s", hostname)
+		return
 	}
 	mmm := GetInstance()
-	internaleventforstate1 := InternalEvent{}
-	go func() {
-		mmm.ProcessInternalEvent(internaleventforstate1)
-	}()
-	timeout := time.After(5 * time.Second)
-	select {
-	case <-timeout:
-		if len(mmm.MyState.ClusterMap) == 0 {
-			t.Fatalf("Map size 0, even after running")
+
+	timeout := time.AfterFunc(5*time.Second, func() {
+		if len(mmm.MyState.ClusterMap) < 1 {
+			t.Fatal("Size of map is 0\n")
 		}
-	}
-	// else {
-	// 	state := State{
-	// 		CurrentState: 1,
-	// 		LeaderIp:     "124.0.0.1",
-	// 		LeaderPort:   10001,
-	// 		ManagedNodes: []string{},
-	// 		AmITheLeader: false,
-	// 		ClusterMap:   nil,
-	// 	}
-
-	// 	mmm := NewMembershipManager(state)
-
-	// 	internaleventforstate0 := InternalEvent{}
-
-	// 	/*Processing the State0 default event must take the state to 1 or 2*/
-	// 	/*The following is an infinite loop*/
-	// 	mmm.ProcessInternalEvent(internaleventforstate0)
-	// 	/*Test whether the groupInfo grew in size
-	// 	 */
-	// }
-
+	})
+	timeout.Stop()
 }
 
 func TestState2(t *testing.T) {

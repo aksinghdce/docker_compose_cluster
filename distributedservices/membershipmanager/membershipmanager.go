@@ -150,7 +150,7 @@ func GetInstance() *MManagerSingleton {
 				LeaderPort:   10001,
 				ManagedNodes: []string{},
 				AmITheLeader: false,
-				ClusterMap:   nil,
+				ClusterMap:   make(map[string]utilities.HeartBeat),
 			},
 			GroupInfo: []string{},
 		}
@@ -182,9 +182,8 @@ func (erm *MManagerSingleton) aggregator(hb utilities.HeartBeatUpperStack) {
 	}
 }
 
-func (erm *MManagerSingleton) AddNodeToGroup(hbuc chan utilities.HeartBeatUpperStack) error {
-	heartBeatDataForAggregator := <-hbuc
-	erm.MyState.ClusterMap[heartBeatDataForAggregator.Ip] = heartBeatDataForAggregator.Hb
+func (erm *MManagerSingleton) AddNodeToGroup(hbu utilities.HeartBeatUpperStack) error {
+	erm.MyState.ClusterMap[hbu.Ip] = hbu.Hb
 	fmt.Printf("State:%v\n", erm.MyState)
 	return nil
 }
@@ -211,8 +210,6 @@ list with ip addresses
 func (erm *MManagerSingleton) ProcessInternalEvent(intev InternalEvent) {
 	switch {
 	case erm.MyState.CurrentState == 1:
-		fmt.Println("internal state:", intev)
-		ch := make(chan utilities.HeartBeatUpperStack)
 		// For "Add to the group" requests membership service of state 1 listens
 		// on 224.0.0.1:10001
 		// for regular heartbeats, it must listen on it's unicast ip address
@@ -220,12 +217,11 @@ func (erm *MManagerSingleton) ProcessInternalEvent(intev InternalEvent) {
 		// At run time State 2 nodes only know their own ip address. Practically
 		// every node is discovering the listener. Once the listener Add's it begins receiving
 		// heartbeats from at least one node.
-		go multicastheartbeatserver.CatchMultiCastDatagramsAndBounce("224.0.0.1", "10001", ch)
+		ch := multicastheartbeatserver.CatchMultiCastDatagramsAndBounce("224.0.0.1", "10001")
 		/*Listen to Add request only for 1 second and react to it by sending the received heartbeat
 		to collector go routine.
 		*/
 		timeout := time.After(10 * time.Second)
-		channelHeartbeatToAggregator := make(chan utilities.HeartBeatUpperStack)
 		for {
 			select {
 			case s := <-ch:
@@ -233,9 +229,8 @@ func (erm *MManagerSingleton) ProcessInternalEvent(intev InternalEvent) {
 					Expect an ADD request. Invoke the aggregator's collector
 					routine to updat the internal data structures.
 				*/
-				channelHeartbeatToAggregator <- s
-				erm.AddNodeToGroup(channelHeartbeatToAggregator)
-				//fmt.Printf("Received upper stack:%v\n", s)
+				fmt.Printf("Received upper stack:%v\n", s)
+				erm.AddNodeToGroup(s)
 			case <-timeout:
 				/*Run State 3 go routines by populating a channel*/
 				fmt.Printf("Print the state %v\n", erm.MyState)
@@ -284,7 +279,7 @@ func (erm *MManagerSingleton) ProcessInternalEvent(intev InternalEvent) {
 				fmt.Printf("INFO:time to do something else")
 			default:
 				// Send ADD request every 100 millisecond
-				time.Sleep(100 * time.Millisecond)
+				//time.Sleep(100 * time.Millisecond)
 				heartbeatChannelOut <- hbMessage
 			}
 		}

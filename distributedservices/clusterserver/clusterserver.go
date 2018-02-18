@@ -28,10 +28,9 @@ func main() {
 		//mmm := membershipmanager.NewMembershipManager(state)
 		internaleventforstate1 := membershipmanager.InternalEvent{}
 		utilities.Log(ctx, startTime.String(), "Changing State")
-		fmt.Printf("My current State:%v", mmm.MyState.CurrentState)
+		utilities.Log(ctx, startTime.String(), "My current State:", string(mmm.MyState.CurrentState))
 		// The following function is an infinite loop in State 1 and State 2
 		mmm.ProcessInternalEvent(internaleventforstate1)
-
 	}()
 
 	/**

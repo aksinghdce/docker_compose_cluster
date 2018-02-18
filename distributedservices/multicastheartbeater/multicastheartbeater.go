@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net"
 	"os"
-	"time"
 )
 
 /*It's a multicast ip address on which leader listens
@@ -52,7 +51,7 @@ func SendHeartBeatMessages(toAddress, toPort, fromPort string) chan utilities.He
 				fmt.Println(err.Error())
 			}
 			//fmt.Printf("Wrote %d bytes\n", n)
-			time.Sleep(time.Second * 1)
+			//time.Sleep(time.Second * 1)
 		}
 	}()
 	return heartbeatChannelIn
