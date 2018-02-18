@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"container/list"
 	"context"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -35,6 +36,7 @@ Input: machine's hostname to be grepped, grep command
 Output: A channel that receives remote grep output
 */
 func RemoteGrep(machine string, cmd url.Values) <-chan string {
+	fmt.Println("RemoteGrep:machine:", machine)
 	c := make(chan string)
 	go func() {
 		req, err := http.NewRequest("POST", "http://"+machine+":8080/grep", strings.NewReader(cmd.Encode()))
@@ -45,8 +47,7 @@ func RemoteGrep(machine string, cmd url.Values) <-chan string {
 		req2 := req.WithContext(ctx)
 		resp, err := http.DefaultClient.Do(req2)
 		if err != nil {
-			log.Println("ERROR: sending request to remote http server", machine)
-			c <- "Error connecting to remote host"
+			c <- err.Error()
 			return
 		}
 		defer resp.Body.Close()

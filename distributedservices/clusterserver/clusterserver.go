@@ -23,21 +23,24 @@ func main() {
 	startTime := time.Now()
 	utilities.Log(ctx, startTime.String())
 
-	state := membershipmanager.State{
-		CurrentState:   2,
-		LeaderIp:       "124.0.0.1",
-		LeaderPort:     10001,
-		ManagedNodes:   []string{},
-		AmITheLeader:   false,
-		ClusterMap:     nil,
-		RequestContext: ctx,
-	}
+	go func() {
+		state := membershipmanager.State{
+			CurrentState:   2,
+			LeaderIp:       "124.0.0.1",
+			LeaderPort:     10001,
+			ManagedNodes:   []string{},
+			AmITheLeader:   false,
+			ClusterMap:     nil,
+			RequestContext: ctx,
+		}
 
-	mmm := membershipmanager.NewMembershipManager(state)
+		mmm := membershipmanager.NewMembershipManager(state)
 
-	internalevent := membershipmanager.InternalEvent{}
+		internalevent := membershipmanager.InternalEvent{}
 
-	mmm.ProcessInternalEvent(internalevent)
+		mmm.ProcessInternalEvent(internalevent)
+	}()
+
 	/**
 	1. Get a grep request from peer, parse it
 	2. Get a goroutine to get local grep

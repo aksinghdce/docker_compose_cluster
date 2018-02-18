@@ -1,5 +1,5 @@
-leader.assignment2
-node2.assignment2
-node3.assignment2
-node4.assignment2
-node5.assignment2
+distributedservice1
+distributedservice2
+distributedservice3
+distributedservice4
+distributedservice5
