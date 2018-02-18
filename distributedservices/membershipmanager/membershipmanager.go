@@ -138,6 +138,20 @@ type MembershipTreeManager struct {
 	groupInfo []string
 }
 
+/*Write heartbeat*/
+func (erm *MembershipTreeManager) aggregator(hb utilities.HeartBeatUpperStack) {
+	_, ok := erm.myState.ClusterMap[hb.Ip]
+	if ok {
+		// Populate the ClusterMap with value type as another map
+		// In the sub-map keep the latest heartbeat from the sender
+		// As soon as the map is added to, send the cluster map to
+		// a go routine for reacting on it. This is how
+		// receiving the heartbeats can be decoupled with reacting
+		// on the heartbeat.
+		// Make a tree diagram to illustrate a use case before coding
+	}
+}
+
 /*
 Specification:
 
@@ -166,14 +180,20 @@ func (erm *MembershipTreeManager) ProcessInternalEvent(intev InternalEvent) {
 		// on 224.0.0.1:10001
 		// for regular heartbeats, it must listen on it's unicast ip address
 		go multicastheartbeatserver.CatchMultiCastDatagramsAndBounce("224.0.0.1", "10001", ch)
-		timeout := time.After(10 * time.Second)
+		/*Listen to Add request only for 1 second and react to it by sending the received heartbeat
+		to collector go routine.
+		*/
+		timeout := time.After(1 * time.Second)
 		for {
 			select {
 			case s := <-ch:
-				//fmt.Println("Received:\n", s)
+				/*
+					Expect an ADD request. Invoke the aggregator's collector
+					routine to updat the internal data structures.
+				*/
 				fmt.Printf("Received upper stack:%v\n", s)
 			case <-timeout:
-				fmt.Printf("This function runs for 10 seconds only")
+				/*Run State 3 go routines by populating a channel*/
 				return
 			default:
 				// Do other activities like sending membership

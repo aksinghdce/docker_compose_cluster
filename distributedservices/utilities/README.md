@@ -18,3 +18,7 @@ func LocalGrep(cmd GrepCommandInterface) GrepResultInterface
 ```
 
 Similarly for other functions
+
+
+# Membership service functionality
+![Design of a membership service node]()

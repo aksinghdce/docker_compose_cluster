@@ -24,21 +24,21 @@ func main() {
 	utilities.Log(ctx, startTime.String())
 
 	go func() {
+
 		state := membershipmanager.State{
-			CurrentState:   2,
-			LeaderIp:       "124.0.0.1",
-			LeaderPort:     10001,
-			ManagedNodes:   []string{},
-			AmITheLeader:   false,
-			ClusterMap:     nil,
-			RequestContext: ctx,
+			CurrentState: 0,
+			LeaderIp:     "124.0.0.1",
+			LeaderPort:   10001,
+			ManagedNodes: []string{},
+			AmITheLeader: false,
+			ClusterMap:   nil,
 		}
 
 		mmm := membershipmanager.NewMembershipManager(state)
+		internaleventforstate1 := membershipmanager.InternalEvent{}
+		utilities.Log(ctx, startTime.String(), "Changing State")
+		mmm.ProcessInternalEvent(internaleventforstate1)
 
-		internalevent := membershipmanager.InternalEvent{}
-
-		mmm.ProcessInternalEvent(internalevent)
 	}()
 
 	/**
