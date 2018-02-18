@@ -10,6 +10,8 @@ This is a Distributed Systems project developed with Docker and GoLang. The dist
 
 # Membership service
 
+![Design of Membership service](https://github.com/aksinghdce/docker_compose_cluster/blob/assignment2/doc/images/Overall%20design%20of%20membership%20service.png)
+
 The service requires a leader to manage group membership list that reflects
 the state of the cluster. When a leader comes up it know that it has to lead
 based on its hostname.
