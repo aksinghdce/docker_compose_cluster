@@ -160,7 +160,10 @@ func (erm *MembershipTreeManager) ProcessInternalEvent(intev InternalEvent) {
 	case erm.myState.currentState == 1:
 		fmt.Println("internal state:", intev)
 		ch := make(chan utilities.HeartBeatUpperStack)
-		go multicastheartbeatserver.CatchDatagramsAndBounce(ch)
+		// For "Add to the group" requests membership service of state 1 listens
+		// on 224.0.0.1:10001
+		// for regular heartbeats, it must listen on it's unicast ip address
+		go multicastheartbeatserver.CatchMultiCastDatagramsAndBounce("224.0.0.1", "10001", ch)
 		timeout := time.After(10 * time.Second)
 		for {
 			select {
@@ -178,11 +181,21 @@ func (erm *MembershipTreeManager) ProcessInternalEvent(intev InternalEvent) {
 			}
 		}
 	case erm.myState.currentState == 2:
+		/*
+		 */
 		r := rand.New(rand.NewSource(99))
-		timeout := time.After(15 * time.Second)
 		heartbeatChannelOut := multicastheartbeater.SendHeartBeatMessages("224.0.0.1", "10001", "10002")
 
+		ch := make(chan utilities.HeartBeatUpperStack)
+		// For "Add to the group" requests membership service of state 1 listens
+		// on 224.0.0.1:10001
+		// for regular heartbeats, it must listen on it's unicast ip address
+		go multicastheartbeatserver.CatchUniCastDatagramsAndBounce("10003", ch)
+		timeout := time.After(10 * time.Second)
 		for {
+			/*
+				Prepare add requests to be sent to the Introducer
+			*/
 			hbMessage := utilities.HeartBeat{
 				Cluster:   []string{"amit", "kumar", "singh"},
 				ReqNumber: r.Int63(),
@@ -190,9 +203,11 @@ func (erm *MembershipTreeManager) ProcessInternalEvent(intev InternalEvent) {
 			}
 
 			select {
+			case hbRcv := <-ch:
+				fmt.Printf("Received Heartbeat:%v\n", hbRcv)
 			case <-timeout:
 				fmt.Printf("INFO:Send heartbeats for 15 minutes")
-				break
+				return
 			default:
 				time.Sleep(1 * time.Second)
 				heartbeatChannelOut <- hbMessage
