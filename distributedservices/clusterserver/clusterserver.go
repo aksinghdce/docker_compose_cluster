@@ -32,7 +32,11 @@ func main() {
 		utilities.Log(ctx, startTime.String(), "Changing State")
 		utilities.Log(ctx, startTime.String(), "My current State:", string(mmm.MyState.CurrentState))
 		// The following function is an infinite loop in State 1 and State 2
-		mmm.ProcessInternalEvent(internaleventforstate1)
+		rerun, newState := mmm.ProcessInternalEvent(internaleventforstate1)
+		for rerun {
+			mmm.MyState = newState
+			rerun, newState = mmm.ProcessInternalEvent(internaleventforstate1)
+		}
 	}()
 
 	/**
