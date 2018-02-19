@@ -343,34 +343,3 @@ func (erm *MManagerSingleton) ProcessInternalEvent(intev InternalEvent) (bool, *
 	}
 	return false, erm
 }
-
-/*
-func (erm *MManagerSingleton) SendAddRequest() {
-	if erm.MyState.currentState == 2 {
-		leaderIpAddress := erm.MyState.leaderIp + ":" + erm.MyState.leaderPort
-		ServerAddr, err := net.ResolveUDPAddr("udp", leaderIpAddress)
-		CheckError(err)
-
-		LocalAddr, err := net.ResolveUDPAddr("udp", "")
-		CheckError(err)
-		fmt.Println("Localaddress:", LocalAddr.String())
-		Conn, err := net.DialUDP("udp", LocalAddr, ServerAddr)
-		CheckError(err)
-
-		defer Conn.Close()
-		i := 0
-		for {
-			msg := strconv.Itoa(i)
-			i++
-			msg += "add"
-			buf := []byte(msg)
-			_, err := Conn.Write(buf)
-			if err != nil {
-				fmt.Println(msg, err)
-			}
-			time.Sleep(time.Second * 1)
-		}
-	}
-
-}
-*/
