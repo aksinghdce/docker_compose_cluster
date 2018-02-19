@@ -95,7 +95,7 @@ func CatchUniCastDatagramsAndBounce(iListenOnPort string) chan utilities.HeartBe
 			}
 			buf = buf[:n]
 			var Result utilities.HeartBeat
-			fmt.Printf("Received:%v\n", string(buf))
+			//fmt.Printf("Received:%v\n", string(buf))
 			errUnmarshal := json.Unmarshal(buf, &Result)
 			if errUnmarshal != nil {
 				fmt.Printf("Error Unmarshalling:%v\n", errUnmarshal.Error())
