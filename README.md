@@ -1,8 +1,8 @@
 Read a more dynamic document of this README : https://tinyurl.com/ybhw2kpc
-
+# Assignment 2 built on top of Assignment 1
 # Features
-1.Distributed grep
-2.Membership service
+Assignment 1 : Distributed grep
+Assignment 2 : Membership service
 
 # Distributed grep
 
@@ -14,67 +14,73 @@ The service requires a leader to manage group membership list that reflects
 the state of the cluster. When a leader comes up it know that it has to lead
 based on its hostname.
 
-When a non-leader comes up, it tries to ping(send udp request) to the leader
-and expect to be added to the group.
+When a non-leader comes up, it tries to send udp request to a node with 
+hostname leader.assignment2 and expect to be added to the group.
 
-# TO-DO design
+There is only one group for the scope of this assignment.
 
-1. Now: 
-  1. Run the leader: 
-  ```
-  > docker exec dockercomposecluster_grepservice1_1 go run ./multicastheartbeatser
-ver/multicastheartbeatserver.go
-  
-  My hostname:leader.assignment2
-  Interface: eth0
-  Interface Flag: up|broadcast|multicast
-  Network: ip
-  multicast address 0 : 224.0.0.1
-  ```
+Nodes(other than leader.assignment2) send "ADD" Request with request code: 1
+leader.assignment2 responds with request code 2 to signify success of "ADD" request
 
-  2. Run a non-leader: 
-  ```
-  docker exec dockercomposecluster_grepservice2_1 go run ./multicastheartbeatser
-ver/multicastheartbeatserver.go
-My hostname:node2.assignment2
-I am not a leader. I am too old to serve. I will just die
-  ```
-  3. Run a udp client at a non-leader
-  ```
-  docker exec dockercomposecluster_grepservice5_1 multicastheartbeater
-  ```
-  
-  The effect can be seen at the console of the multicastheartbeatserver:
-  ```
-  From 172.20.0.6:10002 Data received: 0
-Network: ip
-multicast address 0 : 224.0.0.1
-From 172.20.0.6:10002 Data received: 1
-Network: ip
-multicast address 0 : 224.0.0.1
-From 172.20.0.6:10002 Data received: 2
-Network: ip
-multicast address 0 : 224.0.0.1
-From 172.20.0.6:10002 Data received: 3
-Network: ip
-multicast address 0 : 224.0.0.1
-From 172.20.0.6:10002 Data received: 4
-Network: ip
-multicast address 0 : 224.0.0.1
-From 172.20.0.6:10002 Data received: 5
-Network: ip
-multicast address 0 : 224.0.0.1
-From 172.20.0.6:10002 Data received: 6
-Network: ip
-multicast address 0 : 224.0.0.1
-From 172.20.0.6:10002 Data received: 7
-Network: ip
-multicast address 0 : 224.0.0.1
-From 172.20.0.6:10002 Data received: 8
-Network: ip
-multicast address 0 : 224.0.0.1
-From 172.20.0.6:10002 Data received: 9
-  ```
+The service implements a Finite State Machine with 3 possible states:
+
+1. State 0: Machine has just begin to run
+2. State 1: Machine has assumed the role of a leader : This machine has hostname leader.assignment2
+3. State 2: Machine will begin requesting the leader to add to the group
+4. State 3: Non leaders will try to maintain the cluster membership info independent of the leader
+
+State 3 is not fully implemented yet.
+This work is not 100% complete. 
+
+# Runtime
+```
+distributedservice5_1  | STOPPING ADD REQUEST NOW
+distributedservice5_1  | Running in state 3 now
+distributedservice4_1  | STOPPING ADD REQUEST NOW
+distributedservice4_1  | Running in state 3 now
+distributedservice3_1  | STOPPING ADD REQUEST NOW
+distributedservice3_1  | Running in state 3 now
+distributedservice2_1  | STOPPING ADD REQUEST NOW
+distributedservice2_1  | Running in state 3 now
+distributedservice1_1  | Received Lower stack:{172.20.0.2 {[] 107868 1}}
+distributedservice1_1  | Received ADD request:{172.20.0.2 {[] 107868 1}}
+distributedservice1_1  | First time saw:172.20.0.2
+distributedservice1_1  | GroupInfo:[     172.20.0.2]
+distributedservice1_1  | Received Lower stack:{172.20.0.2 {[] 108167 1}}
+distributedservice1_1  | Received ADD request:{172.20.0.2 {[] 108167 1}}
+distributedservice1_1  | First time saw:172.20.0.2
+distributedservice1_1  | GroupInfo:[     172.20.0.2]
+distributedservice1_1  | Received Lower stack:{172.20.0.5 {[] 7590 1}}
+distributedservice1_1  | Received ADD request:{172.20.0.5 {[] 7590 1}}
+distributedservice1_1  | First time saw:172.20.0.5
+distributedservice1_1  | GroupInfo:[     172.20.0.2 172.20.0.5]
+distributedservice1_1  | Received Lower stack:{172.20.0.5 {[] 7597 1}}
+distributedservice1_1  | Received ADD request:{172.20.0.5 {[] 7597 1}}
+distributedservice1_1  | First time saw:172.20.0.5
+distributedservice1_1  | GroupInfo:[     172.20.0.5 172.20.0.2]
+distributedservice1_1  | Received Lower stack:{172.20.0.4 {[] 22002 1}}
+distributedservice1_1  | Received ADD request:{172.20.0.4 {[] 22002 1}}
+distributedservice1_1  | First time saw:172.20.0.4
+distributedservice1_1  | GroupInfo:[     172.20.0.2 172.20.0.5 172.20.0.4]
+distributedservice1_1  | Received Lower stack:{172.20.0.3 {[] 41411 1}}
+distributedservice1_1  | Received ADD request:{172.20.0.3 {[] 41411 1}}
+distributedservice1_1  | First time saw:172.20.0.3
+distributedservice1_1  | GroupInfo:[     172.20.0.2 172.20.0.5 172.20.0.4 172.20.0.3]
+distributedservice1_1  | Received Lower stack:{172.20.0.4 {[] 22008 1}}
+distributedservice1_1  | Received ADD request:{172.20.0.4 {[] 22008 1}}
+distributedservice1_1  | First time saw:172.20.0.4
+distributedservice1_1  | GroupInfo:[     172.20.0.4 172.20.0.3 172.20.0.2 172.20.0.5]
+distributedservice1_1  | Received Lower stack:{172.20.0.3 {[] 41416 1}}
+distributedservice1_1  | Received ADD request:{172.20.0.3 {[] 41416 1}}
+distributedservice1_1  | First time saw:172.20.0.3
+distributedservice1_1  | GroupInfo:[     172.20.0.4 172.20.0.3 172.20.0.2 172.20.0.5]
+distributedservice5_1  | Cluster Info:[     172.20.0.4 172.20.0.3 172.20.0.2 172.20.0.5]
+distributedservice2_1  | Cluster Info:[     172.20.0.4 172.20.0.3 172.20.0.2 172.20.0.5]
+distributedservice3_1  | Cluster Info:[     172.20.0.4 172.20.0.3 172.20.0.2 172.20.0.5]
+distributedservice4_1  | Cluster Info:[     172.20.0.4 172.20.0.3 172.20.0.2 172.20.0.5]
+
+```
+
 2. Plan:
 3. Test Plan:
 In response the leader checks if the node is a new node.
