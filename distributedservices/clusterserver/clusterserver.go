@@ -1,6 +1,7 @@
 package main
 
 import (
+	"app/membershipmanager"
 	"app/utilities"
 	"context"
 	"fmt"
@@ -21,6 +22,24 @@ func main() {
 	ctx := context.Background()
 	startTime := time.Now()
 	utilities.Log(ctx, startTime.String())
+
+	go func() {
+		mmm := membershipmanager.GetInstance()
+		//mmm := membershipmanager.NewMembershipManager(state)
+		internaleventforstate1 := membershipmanager.InternalEvent{
+			RequestNumber: 1,
+		}
+		utilities.Log(ctx, startTime.String(), "Changing State")
+		utilities.Log(ctx, startTime.String(), "My current State:", string(mmm.MyState.CurrentState))
+		// The following function is an infinite loop in State 1 and State 2
+		rerun, erm := mmm.ProcessInternalEvent(internaleventforstate1)
+		for rerun {
+			mmm.MyState = erm.MyState
+			mmm.GroupInfo = erm.GroupInfo
+			rerun, erm = mmm.ProcessInternalEvent(internaleventforstate1)
+		}
+	}()
+
 	/**
 	1. Get a grep request from peer, parse it
 	2. Get a goroutine to get local grep
@@ -36,6 +55,7 @@ func handler() http.Handler {
 	// similar to the commandHandler to send data from peers to MembershipManager
 	// send appropriate data about the peer to the membership service to service
 	// 3 kinds of events, as described in the assignment statement.
+	r.HandleFunc("/membership/add", utilities.DecorateWithLog(membershipAddHandler))
 	return r
 }
 
@@ -80,4 +100,12 @@ func commandHandler(resWriter http.ResponseWriter, r *http.Request) {
 	grepresult := utilities.LocalGrep(strings.Split(grepCommand, " "))
 	utilities.Log(ctx, grepCommand)
 	fmt.Fprint(resWriter, grepresult)
+}
+
+func membershipAddHandler(resWriter http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
+	ctx := r.Context()
+	ctx = context.WithValue(ctx, int(42), rand.Int63())
+
+	fmt.Fprint(resWriter, "Adding new server")
 }

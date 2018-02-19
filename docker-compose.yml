@@ -1,23 +1,24 @@
 version: '3'
 
 services:
-  grepservice1:
-    build: ./dgrepservice/.
+  distributedservice1:
+    build: ./distributedservices/.
     hostname: leader
     domainname: assignment2
-  grepservice2:
-    build: ./dgrepservice/.
+  distributedservice2:
+    build: ./distributedservices/.
     hostname: node2
     domainname: assignment2
-  grepservice3:
-    build: ./dgrepservice/.
+  distributedservice3:
+    build: ./distributedservices/.
     hostname: node3
     domainname: assignment2
-  grepservice4:
-    build: ./dgrepservice/.
-    hostname: node3
-    domainname: assignment2
-  grepservice5:
-    build: ./dgrepservice/.
+  distributedservice4:
+    build: ./distributedservices/.
     hostname: node4
     domainname: assignment2
+  distributedservice5:
+    build: ./distributedservices/.
+    hostname: node5
+    domainname: assignment2
+            

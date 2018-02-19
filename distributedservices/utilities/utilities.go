@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"container/list"
 	"context"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -35,6 +36,7 @@ Input: machine's hostname to be grepped, grep command
 Output: A channel that receives remote grep output
 */
 func RemoteGrep(machine string, cmd url.Values) <-chan string {
+	fmt.Println("RemoteGrep:machine:", machine)
 	c := make(chan string)
 	go func() {
 		req, err := http.NewRequest("POST", "http://"+machine+":8080/grep", strings.NewReader(cmd.Encode()))
@@ -44,19 +46,35 @@ func RemoteGrep(machine string, cmd url.Values) <-chan string {
 		defer cancel()
 		req2 := req.WithContext(ctx)
 		resp, err := http.DefaultClient.Do(req2)
-		if resp != nil {
-			defer resp.Body.Close()
-		}
 		if err != nil {
-			log.Println("ERROR: sending request to remote http server", machine)
-			c <- "Error connecting to remote host"
+			c <- err.Error()
 			return
 		}
+		defer resp.Body.Close()
 		body, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
 			log.Fatal("Error reading response from remote")
 		}
 		c <- string(body)
+	}()
+	return c
+}
+
+/*
+Specification: This function is called on a Node
+to enquire about it's membership list
+
+Name:
+Input:
+Output:
+*/
+func LocalMembership(machine string, cmd url.Values) <-chan string {
+	c := make(chan string)
+	go func() {
+		/*
+			Get membership list from a node that is listening on machine:8080
+		*/
+		c <- "dummy"
 	}()
 	return c
 }
