@@ -170,24 +170,23 @@ func (erm *MManagerSingleton) AddNodeToGroup(intev InternalEvent, hbu utilities.
 		check if we have already added this node. if we not added
 		then add it
 	*/
-	_, ok := erm.MyState.ClusterMap[hbu.Ip]
-	if !ok {
-		/*We assume that we haven't already added this node
-		so we send 5 udp datagrams to send the acknowledgement
-		*/
-		fmt.Printf("First time saw:%v\n", hbu.Ip)
-		// go func() {
-		// 	heartbeatChannelOut := multicastheartbeater.SendHeartBeatMessages(hbu.Ip, "50009", "50010")
-		// 	for i := 0; i < 5; i++ {
-		// 		hbMessage := utilities.HeartBeat{
-		// 			Cluster:   erm.GroupInfo,
-		// 			ReqNumber: intev.RequestNumber.get(),
-		// 			ReqCode:   2, //1 is for ADD request
-		// 		}
-		// 		heartbeatChannelOut <- hbMessage
-		// 	}
-		// }()
-	}
+
+	/*We assume that we haven't already added this node
+	so we send 5 udp datagrams to send the acknowledgement
+	*/
+	fmt.Printf("First time saw:%v\n", hbu.Ip)
+	heartbeatChannelOut := multicastheartbeater.SendHeartBeatMessages(hbu.Ip, "50009")
+	go func() {
+
+		hbMessage := utilities.HeartBeat{
+			Cluster:   erm.GroupInfo,
+			ReqNumber: intev.RequestNumber.get(),
+			ReqCode:   2, //1 is for ADD request
+		}
+		heartbeatChannelOut <- hbMessage
+
+	}()
+
 	/*
 		Update the heartbeat with the latest received.
 		This will store the time when this heartbeat was received
@@ -267,12 +266,11 @@ func (erm *MManagerSingleton) ProcessInternalEvent(intev InternalEvent) (bool, S
 		 */
 		// heartbeatChannelOut is a channel of utilities.HeartBeat. It returns heartbeats received on
 		// Multicast udp port 10001. We are sending on port 10002
-		heartbeatChannelOut := multicastheartbeater.SendHeartBeatMessages("224.0.0.1", "10001", "50001")
+		heartbeatChannelOut := multicastheartbeater.SendHeartBeatMessages("224.0.0.1", "10001")
 
 		// ch is a channel of utilities.HeartBeatUpperStack to listen to heartbeats on unicast
 		// udp port 10002
-		commandToStopUnicastListener := make(chan bool)
-		heartbeatChannelIn := multicastheartbeatserver.CatchUniCastDatagramsAndBounce("50009", commandToStopUnicastListener)
+		heartbeatChannelIn := multicastheartbeatserver.CatchUniCastDatagramsAndBounce("50009")
 		timeout := time.After(5 * time.Second)
 		for {
 			/*
@@ -295,7 +293,6 @@ func (erm *MManagerSingleton) ProcessInternalEvent(intev InternalEvent) (bool, S
 					fmt.Printf("STOPPING ADD REQUEST NOW\n")
 					erm.MyState.CurrentState = 3
 					// Ask the caller to rerun this function
-					commandToStopUnicastListener <- true
 					return true, erm.MyState
 				}
 			case <-timeout:

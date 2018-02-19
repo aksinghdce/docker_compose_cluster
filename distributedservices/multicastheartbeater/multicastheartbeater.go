@@ -25,22 +25,18 @@ Returns a channel of utilities.HeartBeat
 The caller can read heartbeats on this channel at the speed that UDP
 provides; with a time lag associated with go channels
 */
-func SendHeartBeatMessages(toAddress, toPort string, fromPort string) chan utilities.HeartBeat {
+func SendHeartBeatMessages(toAddress, toPort string) chan utilities.HeartBeat {
 	heartbeatChannelIn := make(chan utilities.HeartBeat)
+	toAddress += ":"
+	toAddress += toPort
+
+	toAddr, err := net.ResolveUDPAddr("udp", toAddress)
+	CheckError(err)
+
+	Conn, err := net.DialUDP("udp", nil, toAddr)
+	CheckError(err)
+
 	go func() {
-
-		toAddress += ":"
-		toAddress += toPort
-
-		toAddr, err := net.ResolveUDPAddr("udp", toAddress)
-		CheckError(err)
-
-		SenderPort := ":" + fromPort
-		fromAddr, err := net.ResolveUDPAddr("udp", SenderPort)
-		CheckError(err)
-
-		Conn, err := net.DialUDP("udp", fromAddr, toAddr)
-		CheckError(err)
 		defer Conn.Close()
 		for {
 			hb := <-heartbeatChannelIn

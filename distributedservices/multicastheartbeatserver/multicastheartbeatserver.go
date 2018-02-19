@@ -68,60 +68,50 @@ func CatchMultiCastDatagramsAndBounce(iListenOnIp, iListenOnPort string) chan ut
 	return c
 }
 
-func CatchUniCastDatagramsAndBounce(iListenOnPort string, commandChannel chan bool) chan utilities.HeartBeatUpperStack {
+func CatchUniCastDatagramsAndBounce(iListenOnPort string) chan utilities.HeartBeatUpperStack {
 	/*I am the leader I will keep listening to events
 	from my group. And keep writing the response on the channel chout*/
 	c := make(chan utilities.HeartBeatUpperStack)
+	//addrstr := string("224.0.0.1")
+	port, errconv := strconv.Atoi(iListenOnPort)
+	if errconv != nil {
+		fmt.Println("Port is not a numeric string")
+	}
+	myaddr := &net.UDPAddr{Port: port}
+	conn, err := net.ListenUDP("udp", myaddr)
+	if err != nil {
+		fmt.Println("Fault 4 in Unicast: ", err)
+	}
+
 	go func() {
+		defer conn.Close()
 		for {
-			select {
-			case commandToStop := <-commandChannel:
-				if commandToStop {
-					fmt.Printf("Asked to stop")
-					return
-				}
-			default:
-				//addrstr := string("224.0.0.1")
-				port, errconv := strconv.Atoi(iListenOnPort)
-				if errconv != nil {
-					fmt.Println("Port is not a numeric string")
-				}
-				myaddr := &net.UDPAddr{Port: port}
-				conn, err := net.ListenUDP("udp", myaddr)
-				if err != nil {
-					fmt.Println("Fault 4 in Unicast: ", err)
-					continue
-				}
 
-				defer conn.Close()
-
-				buf := make([]byte, 100)
-				n, udpAddr, err2 := conn.ReadFromUDP(buf)
-				if err2 != nil {
-					fmt.Printf("Error Reading From UDP:%v\n", err2.Error())
-					continue
-				}
-				buf = buf[:n]
-				var Result utilities.HeartBeat
-
-				errUnmarshal := json.Unmarshal(buf, &Result)
-				if errUnmarshal != nil {
-					fmt.Printf("Error Unmarshalling:%v\n", errUnmarshal.Error())
-					continue
-				}
-				//Decode the data
-				//Read JSON from the peer udp datagrams
-
-				//send the information up the stack for processing
-				//fmt.Printf("Received data:%v\n", Result)
-				//fmt.Printf("Request Number:%v", Result.ReqNumber)
-
-				var hbu utilities.HeartBeatUpperStack
-				hbu.Hb = Result
-				hbu.Ip = udpAddr.IP.String()
-				c <- hbu
+			buf := make([]byte, 1024)
+			n, udpAddr, err2 := conn.ReadFromUDP(buf)
+			if err2 != nil {
+				fmt.Printf("Error Reading From UDP:%v\n", err2.Error())
+				continue
 			}
+			buf = buf[:n]
+			var Result utilities.HeartBeat
+			fmt.Printf("Received:%v\n", string(buf))
+			errUnmarshal := json.Unmarshal(buf, &Result)
+			if errUnmarshal != nil {
+				fmt.Printf("Error Unmarshalling:%v\n", errUnmarshal.Error())
+				continue
+			}
+			//Decode the data
+			//Read JSON from the peer udp datagrams
 
+			//send the information up the stack for processing
+			//fmt.Printf("Received data:%v\n", Result)
+			//fmt.Printf("Request Number:%v", Result.ReqNumber)
+
+			var hbu utilities.HeartBeatUpperStack
+			hbu.Hb = Result
+			hbu.Ip = udpAddr.IP.String()
+			c <- hbu
 		}
 	}()
 	return c
