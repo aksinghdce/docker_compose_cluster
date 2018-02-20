@@ -96,7 +96,8 @@ State 3:
 */
 
 /*
-A counter for request numbers
+An internal counter for requests to the network
+To maintain a vector clock in association with hostname
 */
 type count64 int64
 
@@ -121,18 +122,26 @@ type State struct {
 
 type InternalEvent struct {
 	RequestNumber count64
+	Ctx           context.Context
 }
 
 type MembershipManager interface {
+	/*ProcessInternalEvent manages all the states*/
 	ProcessInternalEvent(intevent InternalEvent) (bool, *MManagerSingleton)
-	GetGroupInfo() []string
+	GetGroupInfo() []string // NOT IMPLEMENTED YET
 	AddNodeToGroup(chan utilities.HeartBeatUpperStack) error
-	RemoveNodeFromGroup() (error, string)
+	RemoveNodeFromGroup() (error, string) // NOT IMPLEMENTED YET
 }
 
+/*
+Specification:
+The Membership Manager is a Singleton. Helps in unit testing
+and initialization from the main function concurrently.
+*/
 type MManagerSingleton struct {
 	MyState   State
-	GroupInfo []string
+	GroupInfo []string /*This is the list every node will use to run the algorithm
+	for membership service in FSM State 3*/
 }
 
 var instance *MManagerSingleton
@@ -166,29 +175,16 @@ func GetInstance() *MManagerSingleton {
 }
 
 func (erm *MManagerSingleton) AddNodeToGroup(intev InternalEvent, hbu utilities.HeartBeatUpperStack) error {
-	/*
-		check if we have already added this node. if we not added
-		then add it
-	*/
-
-	/*We assume that we haven't already added this node
-	so we send 5 udp datagrams to send the acknowledgement
-	*/
-	fmt.Printf("First time saw:%v\n", hbu.Ip)
-	/*
-		Update the heartbeat with the latest received.
-		This will store the time when this heartbeat was received
-	*/
 	erm.MyState.ClusterMap[hbu.Ip] = hbu.Hb
-
-	//fmt.Printf("State:%v\n", erm.MyState)
+	//Create a list of ip addresses added in the ClusterMap
 	nodeList := make([]string, 5, 30)
 	for ip, _ := range erm.MyState.ClusterMap {
 		nodeList = append(nodeList, ip)
 	}
+	//Assign the latest list of nodes to the GroupInfo
 	erm.GroupInfo = nodeList
 	fmt.Printf("GroupInfo:%v\n", erm.GroupInfo)
-	heartbeatChannelOut := multicastheartbeater.SendHeartBeatMessages(hbu.Ip, "50009")
+	heartbeatChannelOut := multicastheartbeater.SendHeartBeatMessages(intev.Ctx, hbu.Ip, "50009")
 	go func() {
 
 		hbMessage := utilities.HeartBeat{
@@ -206,7 +202,7 @@ func (erm *MManagerSingleton) AddNodeToGroup(intev InternalEvent, hbu utilities.
 func (erm *MManagerSingleton) SendState3HeartBeats(intev InternalEvent) {
 	for _, ip := range erm.GroupInfo {
 		if ip != "" {
-			heartbeatChannelOut := multicastheartbeater.SendHeartBeatMessages(ip, "50012")
+			heartbeatChannelOut := multicastheartbeater.SendHeartBeatMessages(intev.Ctx, ip, "50012")
 			go func() {
 
 				hbMessage := utilities.HeartBeat{
@@ -251,7 +247,7 @@ func (erm *MManagerSingleton) ProcessInternalEvent(intev InternalEvent) (bool, *
 		// At run time State 2 nodes only know their own ip address. Practically
 		// every node is discovering the listener. Once the listener Add's it begins receiving
 		// heartbeats from at least one node.
-		ch := multicastheartbeatserver.CatchMultiCastDatagramsAndBounce("224.0.0.1", "10001")
+		ch := multicastheartbeatserver.CatchMultiCastDatagramsAndBounce(intev.Ctx, "224.0.0.1", "10001")
 		/*Listen to Add request only for 1 second and react to it by sending the received heartbeat
 		to collector go routine.
 		*/
@@ -285,11 +281,11 @@ func (erm *MManagerSingleton) ProcessInternalEvent(intev InternalEvent) (bool, *
 		 */
 		// heartbeatChannelOut is a channel of utilities.HeartBeat. It returns heartbeats received on
 		// Multicast udp port 10001. We are sending on port 10002
-		heartbeatChannelOut := multicastheartbeater.SendHeartBeatMessages("224.0.0.1", "10001")
+		heartbeatChannelOut := multicastheartbeater.SendHeartBeatMessages(intev.Ctx, "224.0.0.1", "10001")
 
 		// ch is a channel of utilities.HeartBeatUpperStack to listen to heartbeats on unicast
 		// udp port 10002
-		heartbeatChannelIn := multicastheartbeatserver.CatchUniCastDatagramsAndBounce("50009")
+		heartbeatChannelIn := multicastheartbeatserver.CatchUniCastDatagramsAndBounce(intev.Ctx, "50009")
 		timeout := time.After(5 * time.Second)
 		for {
 			/*
@@ -326,7 +322,7 @@ func (erm *MManagerSingleton) ProcessInternalEvent(intev InternalEvent) (bool, *
 		}
 	case erm.MyState.CurrentState == 3:
 		fmt.Print("Running in state 3 now\n")
-		heartbeatChannelIn3 := multicastheartbeatserver.CatchUniCastDatagramsAndBounce("50012")
+		heartbeatChannelIn3 := multicastheartbeatserver.CatchUniCastDatagramsAndBounce(intev.Ctx, "50012")
 		timeout := time.After(5 * time.Second)
 		for {
 			select {

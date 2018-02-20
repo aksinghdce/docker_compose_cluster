@@ -21,4 +21,16 @@ services:
     build: ./distributedservices/.
     hostname: node5
     domainname: assignment2
+  distributedservice6:
+    build: ./distributedservices/.
+    hostname: node6
+    domainname: assignment2
+  distributedservice7:
+    build: ./distributedservices/.
+    hostname: node7
+    domainname: assignment2
+  distributedservice8:
+    build: ./distributedservices/.
+    hostname: node8
+    domainname: assignment2
             

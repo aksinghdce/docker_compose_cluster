@@ -19,18 +19,19 @@ func main() {
 		Create a log file on every node of the cluster for logging
 		user requests.
 	*/
-	ctx := context.Background()
+	Context := context.Background()
 	startTime := time.Now()
-	utilities.Log(ctx, startTime.String())
+	utilities.Log(Context, startTime.String())
 
-	go func() {
+	go func(ctxt context.Context) {
 		mmm := membershipmanager.GetInstance()
 		//mmm := membershipmanager.NewMembershipManager(state)
 		internaleventforstate1 := membershipmanager.InternalEvent{
 			RequestNumber: 1,
+			Ctx:           ctxt,
 		}
-		utilities.Log(ctx, startTime.String(), "Changing State")
-		utilities.Log(ctx, startTime.String(), "My current State:", string(mmm.MyState.CurrentState))
+		utilities.Log(Context, startTime.String(), "Changing State")
+		utilities.Log(Context, startTime.String(), "My current State:", string(mmm.MyState.CurrentState))
 		// The following function is an infinite loop in State 1 and State 2
 		rerun, erm := mmm.ProcessInternalEvent(internaleventforstate1)
 		for rerun {
@@ -38,7 +39,7 @@ func main() {
 			mmm.GroupInfo = erm.GroupInfo
 			rerun, erm = mmm.ProcessInternalEvent(internaleventforstate1)
 		}
-	}()
+	}(Context)
 
 	/**
 	1. Get a grep request from peer, parse it

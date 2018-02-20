@@ -2,6 +2,7 @@ package multicastheartbeatserver
 
 import (
 	"app/utilities"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -10,54 +11,42 @@ import (
 
 /*
 Specification
-
-Find out if I am not the leader node.
-If I am not the leader node I take a different course of action
-(not implemented yet)
-
-If I am the leader then I listen to pings and ask my local
-http server to update it's internal representation of cluster.
+Use this function only in FSM State 1
+Output: I return the channel on which you can read what I read on multicast port
+Input: The caller context, the multicast ip address, the udp port to listen to ADD request
 */
-func CatchMultiCastDatagramsAndBounce(iListenOnIp, iListenOnPort string) chan utilities.HeartBeatUpperStack {
+func CatchMultiCastDatagramsAndBounce(ctx context.Context, iListenOnIp, iListenOnPort string) chan utilities.HeartBeatUpperStack {
 	/*I am the leader I will keep listening to events
 	from my group. And keep writing the response on the channel chout*/
 	c := make(chan utilities.HeartBeatUpperStack)
+	port, errconv := strconv.Atoi(iListenOnPort)
+	if errconv != nil {
+		utilities.Log(ctx, errconv.Error())
+	}
+
+	conn, err := net.ListenMulticastUDP("udp", nil, &net.UDPAddr{
+		IP:   net.ParseIP(iListenOnIp),
+		Port: port,
+	})
+	if err != nil {
+		utilities.Log(ctx, err.Error())
+	}
 	go func() {
 		for {
-			port, errconv := strconv.Atoi(iListenOnPort)
-			if errconv != nil {
-				fmt.Println("Port is not a numeric string")
-			}
-
-			conn, err := net.ListenMulticastUDP("udp", nil, &net.UDPAddr{
-				IP:   net.ParseIP(iListenOnIp),
-				Port: port,
-			})
-			if err != nil {
-				fmt.Println("Fault 4 in Multicast: ", err)
-			}
-
 			defer conn.Close()
 
 			buf := make([]byte, 100)
 			n, udpAddr, err2 := conn.ReadFromUDP(buf)
 			if err2 != nil {
-				fmt.Printf("Error Reading From UDP:%v\n", err2.Error())
+				utilities.Log(ctx, err2.Error())
 			}
 			buf = buf[:n]
 			var Result utilities.HeartBeat
 
 			errUnmarshal := json.Unmarshal(buf, &Result)
 			if errUnmarshal != nil {
-				fmt.Printf("Error Unmarshalling:%v\n", errUnmarshal.Error())
+				utilities.Log(ctx, errUnmarshal.Error())
 			}
-			//Decode the data
-			//Read JSON from the peer udp datagrams
-
-			//send the information up the stack for processing
-			//fmt.Printf("Received data:%v\n", Result)
-			//fmt.Printf("Request Number:%v", Result.ReqNumber)
-
 			var hbu utilities.HeartBeatUpperStack
 			hbu.Hb = Result
 			hbu.Ip = udpAddr.IP.String()
@@ -68,19 +57,24 @@ func CatchMultiCastDatagramsAndBounce(iListenOnIp, iListenOnPort string) chan ut
 	return c
 }
 
-func CatchUniCastDatagramsAndBounce(iListenOnPort string) chan utilities.HeartBeatUpperStack {
+/*
+Specification:
+Output: I return the channel on which you can listen to the acknowledgement given to ADD request
+Input: The udp port to listen on.
+*/
+func CatchUniCastDatagramsAndBounce(ctx context.Context, iListenOnPort string) chan utilities.HeartBeatUpperStack {
 	/*I am the leader I will keep listening to events
 	from my group. And keep writing the response on the channel chout*/
 	c := make(chan utilities.HeartBeatUpperStack)
 	//addrstr := string("224.0.0.1")
 	port, errconv := strconv.Atoi(iListenOnPort)
 	if errconv != nil {
-		fmt.Println("Port is not a numeric string")
+		utilities.Log(ctx, errconv.Error())
 	}
 	myaddr := &net.UDPAddr{Port: port}
 	conn, err := net.ListenUDP("udp", myaddr)
 	if err != nil {
-		fmt.Println("Fault 4 in Unicast: ", err)
+		utilities.Log(ctx, err.Error())
 	}
 
 	go func() {
@@ -90,7 +84,7 @@ func CatchUniCastDatagramsAndBounce(iListenOnPort string) chan utilities.HeartBe
 			buf := make([]byte, 1024)
 			n, udpAddr, err2 := conn.ReadFromUDP(buf)
 			if err2 != nil {
-				fmt.Printf("Error Reading From UDP:%v\n", err2.Error())
+				utilities.Log(ctx, err2.Error())
 				continue
 			}
 			buf = buf[:n]
@@ -98,16 +92,9 @@ func CatchUniCastDatagramsAndBounce(iListenOnPort string) chan utilities.HeartBe
 			//fmt.Printf("Received:%v\n", string(buf))
 			errUnmarshal := json.Unmarshal(buf, &Result)
 			if errUnmarshal != nil {
-				fmt.Printf("Error Unmarshalling:%v\n", errUnmarshal.Error())
+				utilities.Log(ctx, errUnmarshal.Error())
 				continue
 			}
-			//Decode the data
-			//Read JSON from the peer udp datagrams
-
-			//send the information up the stack for processing
-			//fmt.Printf("Received data:%v\n", Result)
-			//fmt.Printf("Request Number:%v", Result.ReqNumber)
-
 			var hbu utilities.HeartBeatUpperStack
 			hbu.Hb = Result
 			hbu.Ip = udpAddr.IP.String()
