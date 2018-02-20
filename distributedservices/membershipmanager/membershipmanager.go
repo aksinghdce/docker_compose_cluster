@@ -235,8 +235,7 @@ Specification:
 
 Input: InternalEvent : This carries a context.Context and a sequence number
 Output: returns whether the process want to run again to transition state
-	Also, gives a reference to it's singleton (This might not be required.
-	We will remove it in next iteration)
+
 Processing:
 This is the function that runs a finite state machine with 3 states
 as described at the beginning of the file.
