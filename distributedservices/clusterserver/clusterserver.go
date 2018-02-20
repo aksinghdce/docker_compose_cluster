@@ -33,11 +33,9 @@ func main() {
 		utilities.Log(Context, startTime.String(), "Changing State")
 		utilities.Log(Context, startTime.String(), "My current State:", string(mmm.MyState.CurrentState))
 		// The following function is an infinite loop in State 1 and State 2
-		rerun, erm := mmm.ProcessInternalEvent(internaleventforstate1)
+		rerun := mmm.ProcessInternalEvent(internaleventforstate1)
 		for rerun {
-			mmm.MyState = erm.MyState
-			mmm.GroupInfo = erm.GroupInfo
-			rerun, erm = mmm.ProcessInternalEvent(internaleventforstate1)
+			rerun = mmm.ProcessInternalEvent(internaleventforstate1)
 		}
 	}(Context)
 

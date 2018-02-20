@@ -13,6 +13,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+	"strings"
 
 	"app/multicastheartbeater"
 	"app/multicastheartbeatserver"
@@ -129,7 +130,7 @@ type MembershipManager interface {
 	/*ProcessInternalEvent manages all the states*/
 	ProcessInternalEvent(intevent InternalEvent) (bool, *MManagerSingleton)
 	GetGroupInfo() []string // NOT IMPLEMENTED YET
-	AddNodeToGroup(chan utilities.HeartBeatUpperStack) error
+	AddNodeToGroup(chan utilities.HeartBeat) error
 	RemoveNodeFromGroup() (error, string) // NOT IMPLEMENTED YET
 }
 
@@ -142,6 +143,7 @@ type MManagerSingleton struct {
 	MyState   State
 	GroupInfo []string /*This is the list every node will use to run the algorithm
 	for membership service in FSM State 3*/
+	LastHeartbeatReceived utilities.HeartBeat
 }
 
 var instance *MManagerSingleton
@@ -159,6 +161,15 @@ func GetInstance() *MManagerSingleton {
 				ClusterMap:   make(map[string]utilities.HeartBeat),
 			},
 			GroupInfo: nil,
+			LastHeartbeatReceived: utilities.HeartBeat{
+				Cluster: nil,
+				ReqNumber: 0,
+				ReqCode: 0,
+				FromTo: utilities.MessageAddressVector{
+					FromIp: "",
+					ToIp: "",
+				},
+			},
 		}
 
 		hostname, err := os.Hostname()
@@ -174,28 +185,29 @@ func GetInstance() *MManagerSingleton {
 	return instance
 }
 
-func (erm *MManagerSingleton) AddNodeToGroup(intev InternalEvent, hbu utilities.HeartBeatUpperStack) error {
-	erm.MyState.ClusterMap[hbu.Ip] = hbu.Hb
+func (erm *MManagerSingleton) AddNodeToGroup(intev InternalEvent, hb utilities.HeartBeat) error {
+	erm.MyState.ClusterMap[hb.FromTo.FromIp] = hb
 	//Create a list of ip addresses added in the ClusterMap
 	nodeList := make([]string, 5, 30)
 	for ip, _ := range erm.MyState.ClusterMap {
-		nodeList = append(nodeList, ip)
+		if ip != "" {
+			nodeList = append(nodeList, ip)
+		}
 	}
 	//Assign the latest list of nodes to the GroupInfo
 	erm.GroupInfo = nodeList
-	fmt.Printf("GroupInfo:%v\n", erm.GroupInfo)
-	heartbeatChannelOut := multicastheartbeater.SendHeartBeatMessages(intev.Ctx, hbu.Ip, "50009")
-	go func() {
-
-		hbMessage := utilities.HeartBeat{
-			Cluster:   erm.GroupInfo,
-			ReqNumber: intev.RequestNumber.get(),
-			ReqCode:   2, //1 is for ADD request
-		}
-		heartbeatChannelOut <- hbMessage
-
-	}()
-
+	utilities.Log(intev.Ctx, "%v\n", strings.Join(erm.GroupInfo, ""))
+	heartbeatChannelOut := multicastheartbeater.SendHeartBeatMessages(intev.Ctx, hb.FromTo.FromIp, "50009")
+	hbMessage := utilities.HeartBeat{
+		Cluster:   erm.GroupInfo,
+		ReqNumber: intev.RequestNumber.get(),
+		ReqCode:   2, //1 is for ADD request, 2 is for Acknowledgement
+		FromTo: utilities.MessageAddressVector{
+			FromIp: "",
+			ToIp: hb.FromTo.FromIp,
+		},
+	}
+	heartbeatChannelOut <- hbMessage
 	return nil
 }
 
@@ -221,10 +233,14 @@ func (erm *MManagerSingleton) SendState3HeartBeats(intev InternalEvent) {
 /*
 Specification:
 
-Input: InternalEvent
-Output:
+Input: InternalEvent : This carries a context.Context and a sequence number
+Output: returns whether the process want to run again to transition state
+	Also, gives a reference to it's singleton (This might not be required.
+	We will remove it in next iteration)
 Processing:
-The function runs in State 1 only
+This is the function that runs a finite state machine with 3 states
+as described at the beginning of the file.
+
 Receives all the udp datagrams received on
 multicast ip address to receive add request
 
@@ -237,7 +253,7 @@ time of packet arrival
 This hashtable is used to construct a sorted
 list with ip addresses
 */
-func (erm *MManagerSingleton) ProcessInternalEvent(intev InternalEvent) (bool, *MManagerSingleton) {
+func (erm *MManagerSingleton) ProcessInternalEvent(intev InternalEvent) bool {
 	switch {
 	case erm.MyState.CurrentState == 1:
 		// For "Add to the group" requests membership service of state 1 listens
@@ -251,8 +267,9 @@ func (erm *MManagerSingleton) ProcessInternalEvent(intev InternalEvent) (bool, *
 		/*Listen to Add request only for 1 second and react to it by sending the received heartbeat
 		to collector go routine.
 		*/
-		timeout := time.After(2 * time.Second)
+
 		for {
+			timeout := time.After(2 * time.Second)
 			select {
 			case s := <-ch:
 				/*
@@ -286,8 +303,9 @@ func (erm *MManagerSingleton) ProcessInternalEvent(intev InternalEvent) (bool, *
 		// ch is a channel of utilities.HeartBeatUpperStack to listen to heartbeats on unicast
 		// udp port 10002
 		heartbeatChannelIn := multicastheartbeatserver.CatchUniCastDatagramsAndBounce(intev.Ctx, "50009")
-		timeout := time.After(5 * time.Second)
+
 		for {
+			timeout := time.After(5 * time.Second)
 			/*
 				Prepare add requests to be sent to the Introducer
 			*/
@@ -295,6 +313,10 @@ func (erm *MManagerSingleton) ProcessInternalEvent(intev InternalEvent) (bool, *
 				Cluster:   []string{},
 				ReqNumber: intev.RequestNumber.get(),
 				ReqCode:   1, //1 is for ADD request
+				FromTo: utilities.MessageAddressVector{
+					FromIp: "",
+					ToIp: "224.0.0.1",
+				},
 			}
 
 			intev.RequestNumber.increment()
@@ -304,12 +326,13 @@ func (erm *MManagerSingleton) ProcessInternalEvent(intev InternalEvent) (bool, *
 				/*If the heartbeat message contains ReqCode 2, then we must stop sending
 				ADD requests and instead send Keep requests to our successor in the GroupInfo
 				*/
-				if hbRcv.Hb.ReqCode == 2 {
+				if hbRcv.ReqCode == 2 {
 					fmt.Printf("STOPPING ADD REQUEST NOW\n")
 					erm.MyState.CurrentState = 3
-					erm.GroupInfo = hbRcv.Hb.Cluster
-					// Ask the caller to rerun this function
-					return true, erm
+					erm.GroupInfo = hbRcv.Cluster
+					erm.LastHeartbeatReceived = hbRcv
+					// Ask the caller to rerun this function: To change state
+					return true
 				}
 			case <-timeout:
 				// Add will be attempted for 5 seconds, every 100 milliseconds
@@ -323,19 +346,20 @@ func (erm *MManagerSingleton) ProcessInternalEvent(intev InternalEvent) (bool, *
 	case erm.MyState.CurrentState == 3:
 		fmt.Print("Running in state 3 now\n")
 		heartbeatChannelIn3 := multicastheartbeatserver.CatchUniCastDatagramsAndBounce(intev.Ctx, "50012")
-		timeout := time.After(5 * time.Second)
+
 		for {
+			timeout := time.After(5 * time.Second)
 			select {
 			case hbst3 := <-heartbeatChannelIn3:
-				if hbst3.Hb.ReqCode == 3 {
-					erm.GroupInfo = hbst3.Hb.Cluster
+				if hbst3.ReqCode == 3 {
+					erm.GroupInfo = hbst3.Cluster
 				}
 			case <-timeout:
-				fmt.Printf("Cluster Info:%v\n", erm.GroupInfo)
+				fmt.Printf("Cluster Info:%v\n", erm)
 				time.Sleep(1 * time.Millisecond)
 			}
 
 		}
 	}
-	return false, erm
+	return false
 }

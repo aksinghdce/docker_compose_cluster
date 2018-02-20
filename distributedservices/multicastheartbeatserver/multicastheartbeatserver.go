@@ -4,7 +4,6 @@ import (
 	"app/utilities"
 	"context"
 	"encoding/json"
-	"fmt"
 	"net"
 	"strconv"
 )
@@ -15,10 +14,10 @@ Use this function only in FSM State 1
 Output: I return the channel on which you can read what I read on multicast port
 Input: The caller context, the multicast ip address, the udp port to listen to ADD request
 */
-func CatchMultiCastDatagramsAndBounce(ctx context.Context, iListenOnIp, iListenOnPort string) chan utilities.HeartBeatUpperStack {
+func CatchMultiCastDatagramsAndBounce(ctx context.Context, iListenOnIp, iListenOnPort string) chan utilities.HeartBeat {
 	/*I am the leader I will keep listening to events
 	from my group. And keep writing the response on the channel chout*/
-	c := make(chan utilities.HeartBeatUpperStack)
+	c := make(chan utilities.HeartBeat)
 	port, errconv := strconv.Atoi(iListenOnPort)
 	if errconv != nil {
 		utilities.Log(ctx, errconv.Error())
@@ -47,11 +46,8 @@ func CatchMultiCastDatagramsAndBounce(ctx context.Context, iListenOnIp, iListenO
 			if errUnmarshal != nil {
 				utilities.Log(ctx, errUnmarshal.Error())
 			}
-			var hbu utilities.HeartBeatUpperStack
-			hbu.Hb = Result
-			hbu.Ip = udpAddr.IP.String()
-			fmt.Printf("Received Lower stack:%v\n", hbu)
-			c <- hbu
+			Result.FromTo.FromIp = udpAddr.IP.String()
+			c <- Result
 		}
 	}()
 	return c
@@ -62,10 +58,10 @@ Specification:
 Output: I return the channel on which you can listen to the acknowledgement given to ADD request
 Input: The udp port to listen on.
 */
-func CatchUniCastDatagramsAndBounce(ctx context.Context, iListenOnPort string) chan utilities.HeartBeatUpperStack {
+func CatchUniCastDatagramsAndBounce(ctx context.Context, iListenOnPort string) chan utilities.HeartBeat {
 	/*I am the leader I will keep listening to events
 	from my group. And keep writing the response on the channel chout*/
-	c := make(chan utilities.HeartBeatUpperStack)
+	c := make(chan utilities.HeartBeat)
 	//addrstr := string("224.0.0.1")
 	port, errconv := strconv.Atoi(iListenOnPort)
 	if errconv != nil {
@@ -95,10 +91,8 @@ func CatchUniCastDatagramsAndBounce(ctx context.Context, iListenOnPort string) c
 				utilities.Log(ctx, errUnmarshal.Error())
 				continue
 			}
-			var hbu utilities.HeartBeatUpperStack
-			hbu.Hb = Result
-			hbu.Ip = udpAddr.IP.String()
-			c <- hbu
+			Result.FromTo.FromIp = udpAddr.IP.String()
+			c <- Result
 		}
 	}()
 	return c

@@ -13,6 +13,11 @@ TCP protocol 8080
 */
 const LEADER_MULTICAST_UDP_PORT_STRING = ":10001"
 
+type MessageAddressVector struct {
+	FromIp string
+	ToIp string
+}
+
 /*The machine and port is already available
 to us when we read from the UDP connection
 no need to have that information in the
@@ -23,6 +28,7 @@ type HeartBeat struct {
 	Cluster   []string
 	ReqNumber int64
 	ReqCode   int8
+	FromTo MessageAddressVector
 }
 
 type HeartBeatUpperStack struct {
