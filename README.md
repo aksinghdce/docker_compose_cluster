@@ -34,6 +34,8 @@ The service implements a Finite State Machine with 3 possible states:
 State 3 is not fully implemented yet.
 This work is not 100% complete. 
 
+![Design Diagram](https://github.com/aksinghdce/docker_compose_cluster/blob/assignment2/doc/images/Overall%20design%20of%20membership%20service.png)
+
 # Runtime
 ```
 distributedservice5_1  | STOPPING ADD REQUEST NOW
