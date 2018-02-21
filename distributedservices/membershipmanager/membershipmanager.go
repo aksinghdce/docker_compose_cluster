@@ -308,10 +308,25 @@ func (erm *MManagerSingleton) ProcessInternalEvent(intev InternalEvent) bool {
 		/*Listen to Add request only for 1 second and react to it by sending the received heartbeat
 		to collector go routine.
 		*/
-
+		heartbeatChannelIn3 := multicastheartbeatserver.CatchUniCastDatagramsAndBounce(intev.Ctx, "50012")
+		State1ForLoop:
 		for {
+			sendTo, err := erm.WhomToSendHb()
+			if err != nil {
+				utilities.Log(intev.Ctx, err.Error())
+			}
+			fmt.Printf("Need to send Heartbeat to %v\n", sendTo)
+			heartbeatChannelOut := multicastheartbeater.SendHeartBeatMessages(intev.Ctx, sendTo, "50012")
+			
 			timeout := time.After(2 * time.Second)
 			select {
+			case hbst3 := <-heartbeatChannelIn3:
+				fmt.Printf("STATE 3: RECEIVED: %v\n", hbst3)
+				if hbst3.ReqCode == 3 {
+					erm.GroupInfo = hbst3.Cluster
+				}
+				ip_port := strings.Split(hbst3.FromTo.ToIp, ":")
+				erm.MyState.MyIp = ip_port[0]
 			case s := <-ch:
 				/*
 					Expect an ADD request. Invoke the aggregator's collector
@@ -320,12 +335,18 @@ func (erm *MManagerSingleton) ProcessInternalEvent(intev InternalEvent) bool {
 				erm.AddNodeToGroup(intev, s)
 			case <-timeout:
 				/*Run State 3 go routines by populating a channel*/
-				erm.SendState3HeartBeats(intev)
-
-			default:
-				// Do other activities like sending membership
-				// heartbeats to successors in the circle
-				continue
+				time.Sleep(5 * time.Millisecond)
+				heartbeatChannelOut <- utilities.HeartBeat{
+					Cluster:   erm.GroupInfo,
+					ReqNumber: intev.RequestNumber.get(),
+					ReqCode:   3, //1 is for ADD request
+					FromTo: utilities.MessageAddressVector{
+						FromIp: erm.MyState.MyIp,
+						ToIp: sendTo,
+					},
+				}
+				fmt.Printf("STATE 3: SENT: %v\n", sendTo)
+				continue State1ForLoop // WhomToSendHb might have changed by now
 			}
 		}
 	case erm.MyState.CurrentState == 2:
