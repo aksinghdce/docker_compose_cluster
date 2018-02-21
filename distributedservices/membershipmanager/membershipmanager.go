@@ -13,6 +13,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+	"sort"
+	"strings"
 
 	"app/multicastheartbeater"
 	"app/multicastheartbeatserver"
@@ -112,10 +114,10 @@ func (c *count64) get() int64 {
 type State struct {
 	CurrentState int8
 	/*State 0 data*/
-	LeaderIp       string
-	LeaderPort     int
+	MyIp       string
+	SendPort     int
+	ListenPort int
 	ManagedNodes   []string
-	AmITheLeader   bool
 	ClusterMap     map[string]utilities.HeartBeat
 	RequestContext context.Context
 }
@@ -139,6 +141,8 @@ The Membership Manager is a Singleton. Helps in unit testing
 and initialization from the main function concurrently.
 */
 type MManagerSingleton struct {
+	LeaderMultiCastIp string
+	LeaderUniCastIp string
 	MyState   State
 	GroupInfo []string /*This is the list every node will use to run the algorithm
 	for membership service in FSM State 3*/
@@ -148,27 +152,21 @@ type MManagerSingleton struct {
 var instance *MManagerSingleton
 var once sync.Once
 
+/*
+FSM State 0 to FSM State 1 and FSM State 2 happens early
+based on hostname
+*/
 func GetInstance() *MManagerSingleton {
 	once.Do(func() {
 		instance = &MManagerSingleton{
+			LeaderMultiCastIp: "124.0.0.1",
+			LeaderUniCastIp: "",
 			MyState: State{
 				CurrentState: 0,
-				LeaderIp:     "124.0.0.1",
-				LeaderPort:   10001,
 				ManagedNodes: []string{},
-				AmITheLeader: false,
 				ClusterMap:   make(map[string]utilities.HeartBeat),
 			},
 			GroupInfo: nil,
-			LastHeartbeatReceived: utilities.HeartBeat{
-				Cluster: nil,
-				ReqNumber: 0,
-				ReqCode: 0,
-				FromTo: utilities.MessageAddressVector{
-					FromIp: "",
-					ToIp: "",
-				},
-			},
 		}
 
 		hostname, err := os.Hostname()
@@ -209,6 +207,10 @@ func (erm *MManagerSingleton) AddNodeToGroup(intev InternalEvent, hb utilities.H
 	return nil
 }
 
+/*
+This is redundant with SendHeartBeatMessages() in AddNodeToGroup
+I might remove it.
+*/
 func (erm *MManagerSingleton) SendState3HeartBeats(intev InternalEvent) {
 	for _, ip := range erm.GroupInfo {
 		if ip != "" {
@@ -218,7 +220,7 @@ func (erm *MManagerSingleton) SendState3HeartBeats(intev InternalEvent) {
 				hbMessage := utilities.HeartBeat{
 					Cluster:   erm.GroupInfo,
 					ReqNumber: intev.RequestNumber.get(),
-					ReqCode:   3, //1 is for ADD request
+					ReqCode:   3, //3 is for regular heartbeat
 				}
 				heartbeatChannelOut <- hbMessage
 
@@ -226,6 +228,39 @@ func (erm *MManagerSingleton) SendState3HeartBeats(intev InternalEvent) {
 		}
 	}
 
+}
+
+
+func (erm *MManagerSingleton) SortCurrentGroupInfo() []string{
+	removedEmpty := make([]string, len(erm.GroupInfo))
+	for _, ip := range erm.GroupInfo {
+		if ip != "" {
+			removedEmpty = append(removedEmpty, ip)
+		}
+	}
+	sort.Strings(removedEmpty)
+	return removedEmpty
+}
+
+func (erm *MManagerSingleton) WhomToSendHb() (string, error) {
+	sortedIps := erm.SortCurrentGroupInfo()
+	myIndex := -1
+	fmt.Printf("MyIp:%s, sorted Ips:%v\n", erm.MyState.MyIp, sortedIps)
+	for i, ip := range sortedIps {
+		if erm.MyState.MyIp == ip {
+			fmt.Printf("found own ip at %d\n", i)
+			myIndex = i
+		}
+	}
+	if myIndex == -1 {
+		err := fmt.Errorf("your own ip:%v is not in your groupinfo\n", erm.MyState.MyIp)
+		return "", err
+	}
+	if myIndex < (len(sortedIps) - 1) {
+		return sortedIps[myIndex + 1], nil
+	} else {
+		return sortedIps[0], nil
+	}
 }
 
 /*
@@ -322,6 +357,13 @@ func (erm *MManagerSingleton) ProcessInternalEvent(intev InternalEvent) bool {
 				/*If the heartbeat message contains ReqCode 2, then we must stop sending
 				ADD requests and instead send Keep requests to our successor in the GroupInfo
 				*/
+				ip_port := strings.Split(hbRcv.FromTo.ToIp, ":")
+				erm.MyState.MyIp = ip_port[0]
+
+				// Set leader's unicast ip
+				ip_port_leader := strings.Split(hbRcv.FromTo.FromIp, ":")
+				erm.LeaderUniCastIp = ip_port_leader[0]
+				fmt.Printf("Updated myIp to:%v and Leader unicast to: %v\n", erm.MyState.MyIp, erm.LeaderUniCastIp)
 				if hbRcv.ReqCode == 2 {
 					utilities.Log(intev.Ctx, "STATE Transition 2->3\n")
 					erm.MyState.CurrentState = 3
@@ -350,8 +392,11 @@ func (erm *MManagerSingleton) ProcessInternalEvent(intev InternalEvent) bool {
 				if hbst3.ReqCode == 3 {
 					erm.GroupInfo = hbst3.Cluster
 				}
+				ip_port := strings.Split(hbst3.FromTo.ToIp, ":")
+				erm.MyState.MyIp = ip_port[0]
+				fmt.Printf("My Ip updated to:%v\n", erm.MyState.MyIp)
 			case <-timeout:
-				fmt.Printf("Cluster Info:%v\n", erm)
+				//fmt.Printf("Cluster Info:%v\n", erm)
 				time.Sleep(1 * time.Millisecond)
 			}
 

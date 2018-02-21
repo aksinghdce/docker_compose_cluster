@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 	"testing"
-	"time"
+	"sort"
 )
 
 /*
@@ -36,12 +36,11 @@ func TestState1(t *testing.T) {
 	}
 	mmm := GetInstance()
 
-	timeout := time.AfterFunc(5*time.Second, func() {
-		if len(mmm.MyState.ClusterMap) < 1 {
-			t.Fatal("Size of map is 0\n")
-		}
-	})
-	timeout.Stop()
+	
+	if len(mmm.MyState.ClusterMap) < 1 {
+		t.Fatal("Size of map is 0\n")
+	}
+	
 }
 
 func TestState2(t *testing.T) {
@@ -51,4 +50,15 @@ func TestState2(t *testing.T) {
 	}
 
 	fmt.Printf("My hostname:%s\n", hostname)
+}
+
+func TestState3(t *testing.T) {
+	mmm := GetInstance()
+	
+	sortedIp := mmm.SortCurrentGroupInfo()
+	if sort.StringsAreSorted(sortedIp) {
+		t.Log("Ips are sorted")
+	}else {
+		t.Fatal("Not Sorted")
+	}
 }

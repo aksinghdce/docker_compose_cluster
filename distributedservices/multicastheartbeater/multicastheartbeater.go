@@ -39,6 +39,7 @@ func SendHeartBeatMessages(ctx context.Context, toAddress, toPort string) chan u
 		defer Conn.Close()
 		for {
 			hb := <-heartbeatChannelIn
+			hb.FromTo.ToIp = toAddress
 			jsonData, err := json.Marshal(hb)
 			_, err = Conn.Write(jsonData)
 			if err != nil {
