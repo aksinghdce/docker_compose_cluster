@@ -13,7 +13,6 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
-	"strings"
 
 	"app/multicastheartbeater"
 	"app/multicastheartbeatserver"
@@ -196,7 +195,6 @@ func (erm *MManagerSingleton) AddNodeToGroup(intev InternalEvent, hb utilities.H
 	}
 	//Assign the latest list of nodes to the GroupInfo
 	erm.GroupInfo = nodeList
-	utilities.Log(intev.Ctx, "%v\n", strings.Join(erm.GroupInfo, ""))
 	heartbeatChannelOut := multicastheartbeater.SendHeartBeatMessages(intev.Ctx, hb.FromTo.FromIp, "50009")
 	hbMessage := utilities.HeartBeat{
 		Cluster:   erm.GroupInfo,
@@ -275,7 +273,6 @@ func (erm *MManagerSingleton) ProcessInternalEvent(intev InternalEvent) bool {
 					Expect an ADD request. Invoke the aggregator's collector
 					routine to updat the internal data structures.
 				*/
-				fmt.Printf("Received ADD request:%v\n", s)
 				erm.AddNodeToGroup(intev, s)
 			case <-timeout:
 				/*Run State 3 go routines by populating a channel*/
@@ -326,11 +323,11 @@ func (erm *MManagerSingleton) ProcessInternalEvent(intev InternalEvent) bool {
 				ADD requests and instead send Keep requests to our successor in the GroupInfo
 				*/
 				if hbRcv.ReqCode == 2 {
-					fmt.Printf("STOPPING ADD REQUEST NOW\n")
+					utilities.Log(intev.Ctx, "STATE Transition 2->3\n")
 					erm.MyState.CurrentState = 3
 					erm.GroupInfo = hbRcv.Cluster
 					erm.LastHeartbeatReceived = hbRcv
-					// Ask the caller to rerun this function: To change state
+					// Ask the caller to rerun this function: To change state to 3
 					return true
 				}
 			case <-timeout:

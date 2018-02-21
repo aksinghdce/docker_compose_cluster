@@ -5,6 +5,7 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
+	"time"
 	"os"
 )
 
@@ -24,8 +25,8 @@ func Log(ctx context.Context, msg ...string) {
 
 	id, ok := ctx.Value(requestIdKey).(int64)
 	if !ok {
-		log.Println("LOCAL LOG")
-		return
+		ctx = context.WithValue(ctx, requestIdKey, string(time.Nanosecond))
+		id, _ = ctx.Value(requestIdKey).(int64)
 	}
 	log.Printf("[%d] %s\n", id, msg)
 }
