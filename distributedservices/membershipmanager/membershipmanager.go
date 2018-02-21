@@ -232,11 +232,20 @@ func (erm *MManagerSingleton) SendState3HeartBeats(intev InternalEvent) {
 
 
 func (erm *MManagerSingleton) SortCurrentGroupInfo() []string{
-	removedEmpty := make([]string, len(erm.GroupInfo))
+	//Add listener's unicast ip in the extended ring structure
+	//fmt.Printf("Before adding leaderip groupInfo:%v, leaderIp:%v\n", erm.GroupInfo, erm.LeaderUniCastIp)
+	removedEmpty := make([]string, 0)
+	found_leaderip := false
 	for _, ip := range erm.GroupInfo {
-		if ip != "" {
+		if len(ip) != 0 {
 			removedEmpty = append(removedEmpty, ip)
+			if ip == erm.LeaderUniCastIp {
+				found_leaderip = true
+			}
 		}
+	}
+	if found_leaderip == false {
+		removedEmpty = append(removedEmpty, erm.LeaderUniCastIp)
 	}
 	sort.Strings(removedEmpty)
 	return removedEmpty
@@ -245,10 +254,10 @@ func (erm *MManagerSingleton) SortCurrentGroupInfo() []string{
 func (erm *MManagerSingleton) WhomToSendHb() (string, error) {
 	sortedIps := erm.SortCurrentGroupInfo()
 	myIndex := -1
-	fmt.Printf("MyIp:%s, sorted Ips:%v\n", erm.MyState.MyIp, sortedIps)
+	//fmt.Printf("\t\tMyIp:%s, sorted Ips:%v\n", erm.MyState.MyIp, sortedIps)
 	for i, ip := range sortedIps {
 		if erm.MyState.MyIp == ip {
-			fmt.Printf("found own ip at %d\n", i)
+			//fmt.Printf("found own ip at %d\n", i)
 			myIndex = i
 		}
 	}
@@ -382,22 +391,38 @@ func (erm *MManagerSingleton) ProcessInternalEvent(intev InternalEvent) bool {
 			}
 		}
 	case erm.MyState.CurrentState == 3:
-		fmt.Print("Running in state 3 now\n")
 		heartbeatChannelIn3 := multicastheartbeatserver.CatchUniCastDatagramsAndBounce(intev.Ctx, "50012")
-
+TheForLoop:
 		for {
-			timeout := time.After(5 * time.Second)
+			sendTo, err := erm.WhomToSendHb()
+			if err != nil {
+				utilities.Log(intev.Ctx, err.Error())
+			}
+			fmt.Printf("Need to send Heartbeat to %v\n", sendTo)
+			heartbeatChannelOut := multicastheartbeater.SendHeartBeatMessages(intev.Ctx, sendTo, "50012")
+			timeout := time.After(1 * time.Second)
+
 			select {
 			case hbst3 := <-heartbeatChannelIn3:
+				fmt.Printf("STATE 3: RECEIVED: %v\n", hbst3)
 				if hbst3.ReqCode == 3 {
 					erm.GroupInfo = hbst3.Cluster
 				}
 				ip_port := strings.Split(hbst3.FromTo.ToIp, ":")
 				erm.MyState.MyIp = ip_port[0]
-				fmt.Printf("My Ip updated to:%v\n", erm.MyState.MyIp)
 			case <-timeout:
-				//fmt.Printf("Cluster Info:%v\n", erm)
-				time.Sleep(1 * time.Millisecond)
+				time.Sleep(5 * time.Millisecond)
+				heartbeatChannelOut <- utilities.HeartBeat{
+					Cluster:   erm.GroupInfo,
+					ReqNumber: intev.RequestNumber.get(),
+					ReqCode:   3, //1 is for ADD request
+					FromTo: utilities.MessageAddressVector{
+						FromIp: erm.MyState.MyIp,
+						ToIp: sendTo,
+					},
+				}
+				fmt.Printf("STATE 3: SENT: %v\n", sendTo)
+				continue TheForLoop // WhomToSendHb might have changed by now
 			}
 
 		}
