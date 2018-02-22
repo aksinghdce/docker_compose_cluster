@@ -61,4 +61,6 @@ func TestState3(t *testing.T) {
 	}else {
 		t.Fatal("Not Sorted")
 	}
+
+	t.Logf("Group Info:%v\n", mmm.GroupInfo)
 }

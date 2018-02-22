@@ -54,7 +54,7 @@ func handler() http.Handler {
 	// similar to the commandHandler to send data from peers to MembershipManager
 	// send appropriate data about the peer to the membership service to service
 	// 3 kinds of events, as described in the assignment statement.
-	r.HandleFunc("/membership/add", utilities.DecorateWithLog(membershipAddHandler))
+	r.HandleFunc("/membership/get", utilities.DecorateWithLog(membershipAddHandler))
 	return r
 }
 
@@ -105,6 +105,6 @@ func membershipAddHandler(resWriter http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	ctx := r.Context()
 	ctx = context.WithValue(ctx, int(42), rand.Int63())
-
-	fmt.Fprint(resWriter, "Adding new server")
+	mmm := membershipmanager.GetInstance()
+	fmt.Fprint(resWriter, fmt.Sprintf("\n%v\n",mmm.GroupInfo))
 }

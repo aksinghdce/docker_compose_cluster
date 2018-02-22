@@ -97,6 +97,14 @@ State 3:
 
 */
 
+/*Constants
+*/
+
+const (
+	SEND_HEARTBEAT_EVERY = 10 * time.Millisecond
+	DELETE_OLDER_THAN = 1 * time.Second
+)
+
 /*
 An internal counter for requests to the network
 To maintain a vector clock in association with hostname
@@ -118,21 +126,13 @@ type State struct {
 	SendPort     int
 	ListenPort int
 	ManagedNodes   []string
-	ClusterMap     map[string]utilities.HeartBeat
+	ClusterMap     map[string]time.Time
 	RequestContext context.Context
 }
 
 type InternalEvent struct {
 	RequestNumber count64
 	Ctx           context.Context
-}
-
-type MembershipManager interface {
-	/*ProcessInternalEvent manages all the states*/
-	ProcessInternalEvent(intevent InternalEvent) (bool, *MManagerSingleton)
-	GetGroupInfo() []string // NOT IMPLEMENTED YET
-	AddNodeToGroup(chan utilities.HeartBeat) error
-	RemoveNodeFromGroup() (error, string) // NOT IMPLEMENTED YET
 }
 
 /*
@@ -144,7 +144,7 @@ type MManagerSingleton struct {
 	LeaderMultiCastIp string
 	LeaderUniCastIp string
 	MyState   State
-	GroupInfo []string /*This is the list every node will use to run the algorithm
+	GroupInfo map[string]bool /*This is the list every node will use to run the algorithm
 	for membership service in FSM State 3*/
 	LastHeartbeatReceived utilities.HeartBeat
 }
@@ -164,9 +164,9 @@ func GetInstance() *MManagerSingleton {
 			MyState: State{
 				CurrentState: 0,
 				ManagedNodes: []string{},
-				ClusterMap:   make(map[string]utilities.HeartBeat),
+				ClusterMap:   make(map[string]time.Time),
 			},
-			GroupInfo: nil,
+			GroupInfo: make(map[string]bool),
 		}
 
 		hostname, err := os.Hostname()
@@ -182,62 +182,49 @@ func GetInstance() *MManagerSingleton {
 	return instance
 }
 
-func (erm *MManagerSingleton) AddNodeToGroup(intev InternalEvent, hb utilities.HeartBeat) error {
-	erm.MyState.ClusterMap[hb.FromTo.FromIp] = hb
-	//Create a list of ip addresses added in the ClusterMap
-	nodeList := make([]string, 5, 30)
-	for ip, _ := range erm.MyState.ClusterMap {
-		if ip != "" {
-			nodeList = append(nodeList, ip)
+func (erm *MManagerSingleton) DeleteOlderHeartbeats(dur time.Duration) {
+	for ip, timestamp := range erm.MyState.ClusterMap {
+		if timestamp.Sub(time.Now()) >= dur {
+			delete(erm.MyState.ClusterMap, ip)
 		}
 	}
-	//Assign the latest list of nodes to the GroupInfo
-	erm.GroupInfo = nodeList
-	heartbeatChannelOut := multicastheartbeater.SendHeartBeatMessages(intev.Ctx, hb.FromTo.FromIp, "50009")
+}
+
+func (erm *MManagerSingleton) AddNodeToGroup(intev InternalEvent, senderIp string) {
+	erm.MyState.ClusterMap[senderIp] = time.Now()
+	erm.CheckStaleness()
+}
+
+func (erm *MManagerSingleton) CheckStaleness() {
+	for ip, _ := range erm.MyState.ClusterMap {
+		if len(ip) != 0 {
+			stale := time.Now().Sub(erm.MyState.ClusterMap[ip]) > (100 * time.Millisecond)
+			erm.GroupInfo[ip] = stale
+		}
+	}
+}
+
+func (erm *MManagerSingleton) SendAckToAddRequester(intev InternalEvent, ip, port string) {
+	heartbeatChannelOut := multicastheartbeater.SendHeartBeatMessages(intev.Ctx, ip, port)
 	hbMessage := utilities.HeartBeat{
 		Cluster:   erm.GroupInfo,
 		ReqNumber: intev.RequestNumber.get(),
 		ReqCode:   2, //1 is for ADD request, 2 is for Acknowledgement
 		FromTo: utilities.MessageAddressVector{
 			FromIp: "",
-			ToIp: hb.FromTo.FromIp,
+			ToIp: ip,
 		},
 	}
 	heartbeatChannelOut <- hbMessage
-	return nil
 }
-
-/*
-This is redundant with SendHeartBeatMessages() in AddNodeToGroup
-I might remove it.
-*/
-func (erm *MManagerSingleton) SendState3HeartBeats(intev InternalEvent) {
-	for _, ip := range erm.GroupInfo {
-		if ip != "" {
-			heartbeatChannelOut := multicastheartbeater.SendHeartBeatMessages(intev.Ctx, ip, "50012")
-			go func() {
-
-				hbMessage := utilities.HeartBeat{
-					Cluster:   erm.GroupInfo,
-					ReqNumber: intev.RequestNumber.get(),
-					ReqCode:   3, //3 is for regular heartbeat
-				}
-				heartbeatChannelOut <- hbMessage
-
-			}()
-		}
-	}
-
-}
-
 
 func (erm *MManagerSingleton) SortCurrentGroupInfo() []string{
 	//Add listener's unicast ip in the extended ring structure
 	//fmt.Printf("Before adding leaderip groupInfo:%v, leaderIp:%v\n", erm.GroupInfo, erm.LeaderUniCastIp)
 	removedEmpty := make([]string, 0)
 	found_leaderip := false
-	for _, ip := range erm.GroupInfo {
-		if len(ip) != 0 {
+	for ip, stale := range erm.GroupInfo {
+		if len(ip) != 0 && !stale{
 			removedEmpty = append(removedEmpty, ip)
 			if ip == erm.LeaderUniCastIp {
 				found_leaderip = true
@@ -270,6 +257,17 @@ func (erm *MManagerSingleton) WhomToSendHb() (string, error) {
 	} else {
 		return sortedIps[0], nil
 	}
+}
+
+func (erm *MManagerSingleton) ConsolidateInfo(ihave, hehas map[string]bool) {
+	//Refresh my staleness information
+	//For all the ip's that I have, if he has the same ip and we both say "true"
+	// Or if I say true and he doesn't have it
+		//Then delete it from my map
+	// if I say true and he says false
+		//call AddNodeToGroup()
+	// if I say false and he says true
+		//CheckStaleness()
 }
 
 /*
@@ -308,45 +306,66 @@ func (erm *MManagerSingleton) ProcessInternalEvent(intev InternalEvent) bool {
 		/*Listen to Add request only for 1 second and react to it by sending the received heartbeat
 		to collector go routine.
 		*/
-		heartbeatChannelIn3 := multicastheartbeatserver.CatchUniCastDatagramsAndBounce(intev.Ctx, "50012")
+		heartbeatChannelIn := multicastheartbeatserver.CatchUniCastDatagramsAndBounce(intev.Ctx, "50012")
+
+		sendTo, err := erm.WhomToSendHb()
+		if err != nil {
+			utilities.Log(intev.Ctx, err.Error())
+		}
+
+		var heartbeatChannelOut chan utilities.HeartBeat
+			
+		if len(sendTo) > 0 {
+				heartbeatChannelOut = multicastheartbeater.SendHeartBeatMessages(intev.Ctx, sendTo, "50012")
+		}else {
+			fmt.Print("blank sendTo")
+		}
+
 		State1ForLoop:
 		for {
-			sendTo, err := erm.WhomToSendHb()
-			if err != nil {
-				utilities.Log(intev.Ctx, err.Error())
-			}
-			fmt.Printf("Need to send Heartbeat to %v\n", sendTo)
-			heartbeatChannelOut := multicastheartbeater.SendHeartBeatMessages(intev.Ctx, sendTo, "50012")
-			
-			timeout := time.After(2 * time.Second)
+			//Send Heartbeat every 2 millisecond; so heartbeats older than 100 milliseconds can be
+			//safely deleted by calling it a stale heartbeat.
+			timeout := time.After(SEND_HEARTBEAT_EVERY)
+
+			//Display cluster info every 2 second
+			timeoutDisplay := time.After(2 * time.Second)
 			select {
-			case hbst3 := <-heartbeatChannelIn3:
-				fmt.Printf("STATE 3: RECEIVED: %v\n", hbst3)
-				if hbst3.ReqCode == 3 {
-					erm.GroupInfo = hbst3.Cluster
+				//Case for FSM State 3 mode while running in State 1
+			case hbst1 := <-heartbeatChannelIn:
+				fmt.Printf("I:%s have:%v and received:%v\n", erm.MyState.MyIp, erm.GroupInfo, hbst1.Cluster)
+				if hbst1.ReqCode == 3 {
+					erm.GroupInfo = hbst1.Cluster
 				}
-				ip_port := strings.Split(hbst3.FromTo.ToIp, ":")
+				ip_port := strings.Split(hbst1.FromTo.ToIp, ":")
 				erm.MyState.MyIp = ip_port[0]
+				erm.DeleteOlderHeartbeats(DELETE_OLDER_THAN)
+				erm.AddNodeToGroup(intev, hbst1.FromTo.FromIp)
 			case s := <-ch:
 				/*
 					Expect an ADD request. Invoke the aggregator's collector
 					routine to updat the internal data structures.
 				*/
-				erm.AddNodeToGroup(intev, s)
+				//Delete heartbeats older than 20 milliseconds
+				erm.DeleteOlderHeartbeats(DELETE_OLDER_THAN)
+				erm.AddNodeToGroup(intev, s.FromTo.FromIp)
+				erm.SendAckToAddRequester(intev, s.FromTo.FromIp, "50009")
 			case <-timeout:
 				/*Run State 3 go routines by populating a channel*/
 				time.Sleep(5 * time.Millisecond)
-				heartbeatChannelOut <- utilities.HeartBeat{
-					Cluster:   erm.GroupInfo,
-					ReqNumber: intev.RequestNumber.get(),
-					ReqCode:   3, //1 is for ADD request
-					FromTo: utilities.MessageAddressVector{
-						FromIp: erm.MyState.MyIp,
-						ToIp: sendTo,
-					},
+				if len(sendTo) > 0 {
+					heartbeatChannelOut <- utilities.HeartBeat{
+						Cluster:   erm.GroupInfo,
+						ReqNumber: intev.RequestNumber.get(),
+						ReqCode:   3, //1 is for ADD request
+						FromTo: utilities.MessageAddressVector{
+							FromIp: erm.MyState.MyIp,
+							ToIp: sendTo,
+						},
+					}
 				}
-				fmt.Printf("STATE 3: SENT: %v\n", sendTo)
 				continue State1ForLoop // WhomToSendHb might have changed by now
+			case <-timeoutDisplay:
+				fmt.Printf("My IP:%s, My GroupInfo %v", erm.MyState.MyIp, erm.GroupInfo)
 			}
 		}
 	case erm.MyState.CurrentState == 2:
@@ -361,17 +380,14 @@ func (erm *MManagerSingleton) ProcessInternalEvent(intev InternalEvent) bool {
 		// Multicast udp port 10001. We are sending on port 10002
 		heartbeatChannelOut := multicastheartbeater.SendHeartBeatMessages(intev.Ctx, "224.0.0.1", "10001")
 
-		// ch is a channel of utilities.HeartBeatUpperStack to listen to heartbeats on unicast
-		// udp port 10002
 		heartbeatChannelIn := multicastheartbeatserver.CatchUniCastDatagramsAndBounce(intev.Ctx, "50009")
 
 		for {
-			timeout := time.After(5 * time.Second)
 			/*
 				Prepare add requests to be sent to the Introducer
 			*/
 			hbMessage := utilities.HeartBeat{
-				Cluster:   []string{},
+				Cluster:   nil,
 				ReqNumber: intev.RequestNumber.get(),
 				ReqCode:   1, //1 is for ADD request
 				FromTo: utilities.MessageAddressVector{
@@ -402,9 +418,6 @@ func (erm *MManagerSingleton) ProcessInternalEvent(intev InternalEvent) bool {
 					// Ask the caller to rerun this function: To change state to 3
 					return true
 				}
-			case <-timeout:
-				// Add will be attempted for 5 seconds, every 100 milliseconds
-				fmt.Printf("INFO:time to do something else\n")
 			default:
 				// Send ADD request every 100 millisecond
 				//time.Sleep(100 * time.Millisecond)
@@ -412,38 +425,50 @@ func (erm *MManagerSingleton) ProcessInternalEvent(intev InternalEvent) bool {
 			}
 		}
 	case erm.MyState.CurrentState == 3:
-		heartbeatChannelIn3 := multicastheartbeatserver.CatchUniCastDatagramsAndBounce(intev.Ctx, "50012")
+		heartbeatChannelIn := multicastheartbeatserver.CatchUniCastDatagramsAndBounce(intev.Ctx, "50012")
+		sendTo, err := erm.WhomToSendHb()
+		if err != nil {
+			utilities.Log(intev.Ctx, err.Error())
+		}
+		var heartbeatChannelOut chan utilities.HeartBeat
+			
+		if len(sendTo) > 0 {
+			heartbeatChannelOut = multicastheartbeater.SendHeartBeatMessages(intev.Ctx, sendTo, "50012")
+		}else {
+			fmt.Print("blank sendTo")
+		}
 TheForLoop:
 		for {
-			sendTo, err := erm.WhomToSendHb()
-			if err != nil {
-				utilities.Log(intev.Ctx, err.Error())
-			}
-			fmt.Printf("Need to send Heartbeat to %v\n", sendTo)
-			heartbeatChannelOut := multicastheartbeater.SendHeartBeatMessages(intev.Ctx, sendTo, "50012")
-			timeout := time.After(1 * time.Second)
-
+			//We will delete heartbeats older than 100 milliseconds
+			timeout := time.After(SEND_HEARTBEAT_EVERY)
+			//Display cluster info every 2 second
+			timeoutDisplay := time.After(2 * time.Second)
 			select {
-			case hbst3 := <-heartbeatChannelIn3:
-				fmt.Printf("STATE 3: RECEIVED: %v\n", hbst3)
-				if hbst3.ReqCode == 3 {
-					erm.GroupInfo = hbst3.Cluster
+			case hbst := <-heartbeatChannelIn:
+				fmt.Printf("I:%s have:%v and received:%v\n", erm.MyState.MyIp, erm.GroupInfo, hbst.Cluster)
+				if hbst.ReqCode == 3 {
+					erm.GroupInfo = hbst.Cluster
 				}
-				ip_port := strings.Split(hbst3.FromTo.ToIp, ":")
+				ip_port := strings.Split(hbst.FromTo.ToIp, ":")
 				erm.MyState.MyIp = ip_port[0]
+				erm.DeleteOlderHeartbeats(DELETE_OLDER_THAN)
+				erm.AddNodeToGroup(intev, hbst.FromTo.FromIp)
 			case <-timeout:
-				time.Sleep(5 * time.Millisecond)
-				heartbeatChannelOut <- utilities.HeartBeat{
-					Cluster:   erm.GroupInfo,
-					ReqNumber: intev.RequestNumber.get(),
-					ReqCode:   3, //1 is for ADD request
-					FromTo: utilities.MessageAddressVector{
-						FromIp: erm.MyState.MyIp,
-						ToIp: sendTo,
-					},
+				if len(sendTo) > 0 {
+					heartbeatChannelOut <- utilities.HeartBeat{
+						Cluster:   erm.GroupInfo,
+						ReqNumber: intev.RequestNumber.get(),
+						ReqCode:   3, //1 is for ADD request
+						FromTo: utilities.MessageAddressVector{
+							FromIp: erm.MyState.MyIp,
+							ToIp: sendTo,
+						},
+					}
 				}
-				fmt.Printf("STATE 3: SENT: %v\n", sendTo)
+				
 				continue TheForLoop // WhomToSendHb might have changed by now
+			case <-timeoutDisplay:
+				fmt.Printf("My IP:%s, My GroupInfo %v", erm.MyState.MyIp, erm.GroupInfo)
 			}
 
 		}

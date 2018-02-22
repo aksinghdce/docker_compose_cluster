@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"net"
+	"fmt"
 )
 
 /*
@@ -18,32 +19,31 @@ TO-DO: Write unit test for it.
 */
 func SendHeartBeatMessages(ctx context.Context, toAddress, toPort string) chan utilities.HeartBeat {
 	heartbeatChannelIn := make(chan utilities.HeartBeat)
-	toAddress += ":"
-	toAddress += toPort
-
-	toAddr, err := net.ResolveUDPAddr("udp", toAddress)
-	if err != nil {
-		utilities.Log(ctx, err.Error())
-	}
-
-	Conn, err := net.DialUDP("udp", nil, toAddr)
-	if err != nil {
-		utilities.Log(ctx, err.Error())
-	}
-
 	go func() {
-		/*The connection will die with the go routine.
-		This go routine will run concurrently listening on
-		the channel we give it to read from.
-		*/
+		toAddress += ":"
+		toAddress += toPort
+		toAddr, err := net.ResolveUDPAddr("udp", toAddress)
+		if err != nil {
+			utilities.Log(ctx, err.Error())
+		}
+		Conn, err := net.DialUDP("udp", nil, toAddr)
+		if err != nil {
+			//utilities.Log(ctx, err.Error())
+			fmt.Printf("Error DialUDP:%s\n", err.Error())
+			return
+		}
 		defer Conn.Close()
 		for {
-			hb := <-heartbeatChannelIn
-			hb.FromTo.ToIp = toAddress
-			jsonData, err := json.Marshal(hb)
-			_, err = Conn.Write(jsonData)
-			if err != nil {
-				utilities.Log(ctx, err.Error())
+			select {
+			case hb := <-heartbeatChannelIn:
+				hb.FromTo.ToIp = toAddress
+				jsonData, err := json.Marshal(hb)
+				_, err = Conn.Write(jsonData)
+				if err != nil {
+					//utilities.Log(ctx, err.Error())
+					fmt.Printf("Conn.Write:%s\n", err.Error())
+					return
+				}
 			}
 		}
 	}()

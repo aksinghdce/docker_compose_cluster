@@ -25,15 +25,10 @@ Heartbeat packet
 But we might want to know the hostname
 */
 type HeartBeat struct {
-	Cluster   []string
+	Cluster   map[string]bool
 	ReqNumber int64
 	ReqCode   int8
 	FromTo MessageAddressVector
-}
-
-type HeartBeatUpperStack struct {
-	Ip string
-	Hb HeartBeat
 }
 
 type node struct {

@@ -23,17 +23,17 @@ func CatchMultiCastDatagramsAndBounce(ctx context.Context, iListenOnIp, iListenO
 		utilities.Log(ctx, errconv.Error())
 	}
 
-	conn, err := net.ListenMulticastUDP("udp", nil, &net.UDPAddr{
-		IP:   net.ParseIP(iListenOnIp),
-		Port: port,
-	})
-	if err != nil {
-		utilities.Log(ctx, err.Error())
-	}
+	
 	go func() {
+		conn, err := net.ListenMulticastUDP("udp", nil, &net.UDPAddr{
+			IP:   net.ParseIP(iListenOnIp),
+			Port: port,
+		})
+		if err != nil {
+			utilities.Log(ctx, err.Error())
+		}
+		defer conn.Close()
 		for {
-			defer conn.Close()
-
 			buf := make([]byte, 100)
 			n, udpAddr, err2 := conn.ReadFromUDP(buf)
 			if err2 != nil {
@@ -68,12 +68,13 @@ func CatchUniCastDatagramsAndBounce(ctx context.Context, iListenOnPort string) c
 		utilities.Log(ctx, errconv.Error())
 	}
 	myaddr := &net.UDPAddr{Port: port}
-	conn, err := net.ListenUDP("udp", myaddr)
-	if err != nil {
-		utilities.Log(ctx, err.Error())
-	}
+	
 
 	go func() {
+		conn, err := net.ListenUDP("udp", myaddr)
+		if err != nil {
+			utilities.Log(ctx, err.Error())
+		}
 		defer conn.Close()
 		for {
 
