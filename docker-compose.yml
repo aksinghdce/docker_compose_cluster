@@ -29,3 +29,75 @@ services:
     build: ./distributedservices/.
     hostname: node7
     domainname: assignment2
+  distributedservice8:
+    build: ./distributedservices/.
+    hostname: node8
+    domainname: assignment2
+  distributedservice9:
+    build: ./distributedservices/.
+    hostname: node9
+    domainname: assignment2
+  distributedservice10:
+    build: ./distributedservices/.
+    hostname: node10
+    domainname: assignment2
+  distributedservice11:
+    build: ./distributedservices/.
+    hostname: node11
+    domainname: assignment2
+  distributedservice12:
+    build: ./distributedservices/.
+    hostname: node12
+    domainname: assignment2
+  distributedservice13:
+    build: ./distributedservices/.
+    hostname: node13
+    domainname: assignment2
+  distributedservice14:
+    build: ./distributedservices/.
+    hostname: node14
+    domainname: assignment2
+  distributedservice15:
+    build: ./distributedservices/.
+    hostname: node15
+    domainname: assignment2
+  distributedservice16:
+    build: ./distributedservices/.
+    hostname: node16
+    domainname: assignment2
+  distributedservice17:
+    build: ./distributedservices/.
+    hostname: node17
+    domainname: assignment2
+  distributedservice18:
+    build: ./distributedservices/.
+    hostname: node18
+    domainname: assignment2
+  distributedservice19:
+    build: ./distributedservices/.
+    hostname: node19
+    domainname: assignment2
+  distributedservice20:
+    build: ./distributedservices/.
+    hostname: node20
+    domainname: assignment2
+  distributedservice21:
+    build: ./distributedservices/.
+    hostname: node21
+    domainname: assignment2
+  distributedservice22:
+    build: ./distributedservices/.
+    hostname: node22
+    domainname: assignment2
+  distributedservice23:
+    build: ./distributedservices/.
+    hostname: node23
+    domainname: assignment2
+  distributedservice24:
+    build: ./distributedservices/.
+    hostname: node24
+    domainname: assignment2
+  distributedservice25:
+    build: ./distributedservices/.
+    hostname: node25
+    domainname: assignment2

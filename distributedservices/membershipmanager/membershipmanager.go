@@ -101,7 +101,7 @@ State 3:
 */
 
 const (
-	SEND_HEARTBEAT_EVERY = 10 * time.Millisecond
+	SEND_HEARTBEAT_EVERY = 100 * time.Millisecond
 	DELETE_OLDER_THAN = 1 * time.Second
 )
 
@@ -198,7 +198,7 @@ func (erm *MManagerSingleton) AddNodeToGroup(intev InternalEvent, senderIp strin
 func (erm *MManagerSingleton) CheckStaleness() {
 	for ip, _ := range erm.MyState.ClusterMap {
 		if len(ip) != 0 {
-			stale := time.Now().Sub(erm.MyState.ClusterMap[ip]) > (100 * time.Millisecond)
+			stale := time.Now().Sub(erm.MyState.ClusterMap[ip]) > (1000 * time.Millisecond)
 			erm.GroupInfo[ip] = stale
 		}
 	}
