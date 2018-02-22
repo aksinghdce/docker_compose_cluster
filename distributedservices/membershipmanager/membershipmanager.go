@@ -299,7 +299,7 @@ func (erm *MManagerSingleton) ProcessInternalEvent(intev InternalEvent) bool {
 				//Delete heartbeats older than 20 milliseconds
 				erm.DeleteOlderHeartbeats(DELETE_OLDER_THAN)
 				erm.AddNodeToGroup(intev, s.FromTo.FromIp)
-				if s.ReqCode != 3 {
+				if s.ReqCode == 1 {
 					erm.SendAckToAddRequester(intev, s.FromTo.FromIp, "50009")
 				}
 			case <-timeout:
@@ -420,7 +420,7 @@ func (erm *MManagerSingleton) ProcessInternalEvent(intev InternalEvent) bool {
 					ReqCode:   3, //1 is for ADD request
 					FromTo: utilities.MessageAddressVector{
 						FromIp: erm.MyState.MyIp,
-						ToIp: sendTo,
+						ToIp: erm.LeaderUniCastIp,
 					},
 				}
 			}
