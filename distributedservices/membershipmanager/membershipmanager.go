@@ -261,28 +261,6 @@ func (erm *MManagerSingleton) WhomToSendHb() (string, error) {
 	}
 }
 
-func (erm *MManagerSingleton) ConsolidateInfo(hehas map[string]bool) {
-	//Refresh my staleness information
-	erm.CheckStaleness()
-	var consolidatedMap map[string]bool
-	if len(hehas) > len(erm.GroupInfo)  {
-		consolidatedMap = make(map[string]bool, len(hehas))
-		for ip, state := range hehas {
-			consolidatedMap[ip] = state
-		}
-	}
-	if len(consolidatedMap) > len(erm.GroupInfo) {
-		erm.GroupInfo = consolidatedMap
-	}
-	//For all the ip's that I have, if he has the same ip and we both say "true"
-	// Or if I say true and he doesn't have it
-		//Then delete it from my map
-	// if I say true and he says false
-		//call AddNodeToGroup()
-	// if I say false and he says true
-		//CheckStaleness()
-}
-
 /*
 Specification:
 
@@ -334,7 +312,8 @@ func (erm *MManagerSingleton) ProcessInternalEvent(intev InternalEvent) bool {
 			case hbst1 := <-heartbeatChannelIn:
 				//fmt.Printf("I:%s have:%v and received:%v\n", erm.MyState.MyIp, erm.GroupInfo, hbst1.Cluster)
 				if hbst1.ReqCode == 3 {
-					erm.ConsolidateInfo(hbst1.Cluster)
+					//erm.ConsolidateInfo(hbst1.Cluster)
+					erm.GroupInfo = hbst1.Cluster
 				}
 				ip_port := strings.Split(hbst1.FromTo.ToIp, ":")
 				erm.MyState.MyIp = ip_port[0]
@@ -432,7 +411,8 @@ func (erm *MManagerSingleton) ProcessInternalEvent(intev InternalEvent) bool {
 			case hbst := <-heartbeatChannelIn:
 				//fmt.Printf("I:%s have:%v and received:%v\n", erm.MyState.MyIp, erm.GroupInfo, hbst.Cluster)
 				if hbst.ReqCode == 3 {
-					erm.ConsolidateInfo(hbst.Cluster)
+					//erm.ConsolidateInfo(hbst.Cluster)
+					erm.GroupInfo = hbst.Cluster
 				}
 				ip_port := strings.Split(hbst.FromTo.ToIp, ":")
 				erm.MyState.MyIp = ip_port[0]
