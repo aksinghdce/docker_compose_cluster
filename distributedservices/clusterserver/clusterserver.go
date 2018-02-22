@@ -37,6 +37,7 @@ func main() {
 		for rerun {
 			rerun = mmm.ProcessInternalEvent(internaleventforstate1)
 		}
+		fmt.Printf("rerun is false\n")
 	}(Context)
 
 	/**
