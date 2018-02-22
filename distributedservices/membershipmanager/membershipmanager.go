@@ -332,7 +332,7 @@ func (erm *MManagerSingleton) ProcessInternalEvent(intev InternalEvent) bool {
 			select {
 				//Case for FSM State 3 mode while running in State 1
 			case hbst1 := <-heartbeatChannelIn:
-				fmt.Printf("I:%s have:%v and received:%v\n", erm.MyState.MyIp, erm.GroupInfo, hbst1.Cluster)
+				//fmt.Printf("I:%s have:%v and received:%v\n", erm.MyState.MyIp, erm.GroupInfo, hbst1.Cluster)
 				if hbst1.ReqCode == 3 {
 					erm.GroupInfo = hbst1.Cluster
 				}
@@ -445,7 +445,7 @@ TheForLoop:
 			timeoutDisplay := time.After(2 * time.Second)
 			select {
 			case hbst := <-heartbeatChannelIn:
-				fmt.Printf("I:%s have:%v and received:%v\n", erm.MyState.MyIp, erm.GroupInfo, hbst.Cluster)
+				//fmt.Printf("I:%s have:%v and received:%v\n", erm.MyState.MyIp, erm.GroupInfo, hbst.Cluster)
 				if hbst.ReqCode == 3 {
 					erm.GroupInfo = hbst.Cluster
 				}
