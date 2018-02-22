@@ -248,6 +248,16 @@ func (erm *MManagerSingleton) WhomToSendHb() (string, error) {
 	}
 }
 
+
+func (erm *MManagerSingleton) ConsolidateInfo(remoteMap map[string]bool) {
+	
+	if len(remoteMap) > len(erm.GroupInfo) {
+		for key, state := range remoteMap {
+			erm.GroupInfo[key] = state
+		}
+	}
+	
+}
 /*
 Specification:
 
@@ -367,8 +377,6 @@ func (erm *MManagerSingleton) ProcessInternalEvent(intev InternalEvent) bool {
 					return true
 				}
 			default:
-				// Send ADD request every 100 millisecond
-				//time.Sleep(100 * time.Millisecond)
 				heartbeatChannelOut <- hbMessage
 			}
 		}

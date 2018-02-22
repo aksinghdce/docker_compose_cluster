@@ -29,7 +29,3 @@ services:
     build: ./distributedservices/.
     hostname: node7
     domainname: assignment2
-  distributedservice8:
-    build: ./distributedservices/.
-    hostname: node8
-    domainname: assignment2
