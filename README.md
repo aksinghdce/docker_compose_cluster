@@ -1,4 +1,9 @@
+# Overall design of the system
+## How I used docker for the project
 Read a more dynamic document of this README : https://tinyurl.com/ybhw2kpc
+. this document contains other information about algorithms and design decisions besides the ones mentioned in this document. Please feel free to comment in this document because you can.
+
+
 # Assignment 2 built on top of Assignment 1
 # Features
 Assignment 1 : Distributed grep
@@ -37,6 +42,10 @@ This work is not 100% complete. We are yet to fix a defect. We will describe the
 
 2. Plan:
 Need to fix a concurrency issue in the code. The issue can be seen when we try to update the group membership information after receiving the heartbeat from any peer. The error is basically a race condition with go maps.
+
+
+_*Explanation of the issue: The nodes that are running in State 3 have a problem of coupling between the layer that is responsible for maintaining the membership map and a lower layer that is responsible for sending udp packets to the peers. When the node running in State 3 is trying to consolidate the information received from a peer into it's own data structure it complains :" Attempt to read and write map at the same time "*_
+
 3. Test Plan:
 There is a technical difficulty to impersonate a peer node in the test cases. Need to figure out an alternative.
 
@@ -76,7 +85,7 @@ You can do a
 ```
 docker-compose ps
 ```
-to test whether the container got added
+to test whether the container got added to the docker-compose cluster already running
 
 ## Running the tests
 
@@ -135,27 +144,12 @@ The test cases are written for all the packages developed for this project. [Som
 The following test, tests the local node's grepping responsibility:
 ```
 PS C:\Users\aksin\go\src\docker_compose_cluster> docker exec dockercomposecluster_grepservice1_1 go test -v ./utilities
-=== RUN   TestCluster
---- PASS: TestCluster (0.00s)
-=== RUN   TestLocalGrep
-=== RUN   TestLocalGrep/exporting_8080_grepped
-=== RUN   TestLocalGrep/local_log_file_creation_grepped
---- PASS: TestLocalGrep (0.00s)
-    --- PASS: TestLocalGrep/exporting_8080_grepped (0.00s)
-    --- PASS: TestLocalGrep/local_log_file_creation_grepped (0.00s)
-=== RUN   ExampleLocalGrep
---- PASS: ExampleLocalGrep (0.00s)
-PASS
-ok      app/utilities   0.008s
 ```
+Note: I don't choose to maintain the outputs of the programs because they keep changing too very often; it makes the process of maintaining the outputs of the commands impractical.
 
 The following test, tests the http server's handler:
 ```
 PS C:\Users\aksin> docker exec dockercomposecluster_grepservice1_1 go test -v ./distributedgrepserver
-=== RUN   TestCommandHandler
---- PASS: TestCommandHandler (0.00s)
-PASS
-ok      app/distributedgrepserver       0.005s
 ```
 
 # Test of the membership service
@@ -163,11 +157,7 @@ ok      app/distributedgrepserver       0.005s
 
 ### And coding style tests
 
-Explain what these tests test and why
-
-```
-Give an example
-```
+This is work in progress...
 
 ## Built With
 
