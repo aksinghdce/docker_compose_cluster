@@ -1,4 +1,9 @@
+# Overall design of the system
+## How I used docker for the project
 Read a more dynamic document of this README : https://tinyurl.com/ybhw2kpc
+. this document contains other information about algorithms and design decisions besides the ones mentioned in this document. Please feel free to comment in this document because you can.
+
+
 # Assignment 2 built on top of Assignment 1
 # Features
 Assignment 1 : Distributed grep
@@ -6,88 +11,43 @@ Assignment 2 : Membership service
 
 # Distributed grep
 
-This is a Distributed Systems project developed with Docker and GoLang. The distributed service being implemented in this project is "distributedgrep" (distributed grep).
+This is a Distributed Systems project developed with Docker and GoLang. The first out of two distributed services is "distributedgrep" (distributed grep). We will describe distributed grep service while discussing Membership service.
 
 # Membership service
 
-![Design of Membership service](https://github.com/aksinghdce/docker_compose_cluster/blob/assignment2/doc/images/Overall%20design%20of%20membership%20service.png)
+The service requires a leader to manage group membership list that reflects the state of the cluster. When a leader comes up it know that it has to lead based on its hostname.
 
-The service requires a leader to manage group membership list that reflects
-the state of the cluster. When a leader comes up it know that it has to lead
-based on its hostname.
+When a non-leader comes up, it tries to send udp request to a node with hostname leader.assignment2 and expect to be added to the group.
 
-When a non-leader comes up, it tries to send udp request to a node with 
-hostname leader.assignment2 and expect to be added to the group.
+There is only one membership group for the scope of this assignment.
 
-There is only one group for the scope of this assignment.
-
-Nodes(other than leader.assignment2) send "ADD" Request with request code: 1
-leader.assignment2 responds with request code 2 to signify success of "ADD" request
+Nodes(other than leader.assignment2) send "ADD" Request with request code: 1, leader.assignment2 responds with request code 2 to signify success of "ADD" request
 
 The service implements a Finite State Machine with 3 possible states:
 
-1. State 0: Machine has just begin to run
+1. State 0: Machine has just begin to run : This state is transient and trivial.
 2. State 1: Machine has assumed the role of a leader : This machine has hostname leader.assignment2
 3. State 2: Machine will begin requesting the leader to add to the group
 4. State 3: Non leaders will try to maintain the cluster membership info independent of the leader
 
-State 3 is not fully implemented yet.
-This work is not 100% complete. 
+This work is not 100% complete. We are yet to fix a defect. We will describe the defect further down this document.
 
 ![Design Diagram](https://github.com/aksinghdce/docker_compose_cluster/blob/assignment2/doc/images/Overall%20design%20of%20membership%20service.png)
 
 # Runtime
-```
-distributedservice5_1  | STOPPING ADD REQUEST NOW
-distributedservice5_1  | Running in state 3 now
-distributedservice4_1  | STOPPING ADD REQUEST NOW
-distributedservice4_1  | Running in state 3 now
-distributedservice3_1  | STOPPING ADD REQUEST NOW
-distributedservice3_1  | Running in state 3 now
-distributedservice2_1  | STOPPING ADD REQUEST NOW
-distributedservice2_1  | Running in state 3 now
-distributedservice1_1  | Received Lower stack:{172.20.0.2 {[] 107868 1}}
-distributedservice1_1  | Received ADD request:{172.20.0.2 {[] 107868 1}}
-distributedservice1_1  | First time saw:172.20.0.2
-distributedservice1_1  | GroupInfo:[     172.20.0.2]
-distributedservice1_1  | Received Lower stack:{172.20.0.2 {[] 108167 1}}
-distributedservice1_1  | Received ADD request:{172.20.0.2 {[] 108167 1}}
-distributedservice1_1  | First time saw:172.20.0.2
-distributedservice1_1  | GroupInfo:[     172.20.0.2]
-distributedservice1_1  | Received Lower stack:{172.20.0.5 {[] 7590 1}}
-distributedservice1_1  | Received ADD request:{172.20.0.5 {[] 7590 1}}
-distributedservice1_1  | First time saw:172.20.0.5
-distributedservice1_1  | GroupInfo:[     172.20.0.2 172.20.0.5]
-distributedservice1_1  | Received Lower stack:{172.20.0.5 {[] 7597 1}}
-distributedservice1_1  | Received ADD request:{172.20.0.5 {[] 7597 1}}
-distributedservice1_1  | First time saw:172.20.0.5
-distributedservice1_1  | GroupInfo:[     172.20.0.5 172.20.0.2]
-distributedservice1_1  | Received Lower stack:{172.20.0.4 {[] 22002 1}}
-distributedservice1_1  | Received ADD request:{172.20.0.4 {[] 22002 1}}
-distributedservice1_1  | First time saw:172.20.0.4
-distributedservice1_1  | GroupInfo:[     172.20.0.2 172.20.0.5 172.20.0.4]
-distributedservice1_1  | Received Lower stack:{172.20.0.3 {[] 41411 1}}
-distributedservice1_1  | Received ADD request:{172.20.0.3 {[] 41411 1}}
-distributedservice1_1  | First time saw:172.20.0.3
-distributedservice1_1  | GroupInfo:[     172.20.0.2 172.20.0.5 172.20.0.4 172.20.0.3]
-distributedservice1_1  | Received Lower stack:{172.20.0.4 {[] 22008 1}}
-distributedservice1_1  | Received ADD request:{172.20.0.4 {[] 22008 1}}
-distributedservice1_1  | First time saw:172.20.0.4
-distributedservice1_1  | GroupInfo:[     172.20.0.4 172.20.0.3 172.20.0.2 172.20.0.5]
-distributedservice1_1  | Received Lower stack:{172.20.0.3 {[] 41416 1}}
-distributedservice1_1  | Received ADD request:{172.20.0.3 {[] 41416 1}}
-distributedservice1_1  | First time saw:172.20.0.3
-distributedservice1_1  | GroupInfo:[     172.20.0.4 172.20.0.3 172.20.0.2 172.20.0.5]
-distributedservice5_1  | Cluster Info:[     172.20.0.4 172.20.0.3 172.20.0.2 172.20.0.5]
-distributedservice2_1  | Cluster Info:[     172.20.0.4 172.20.0.3 172.20.0.2 172.20.0.5]
-distributedservice3_1  | Cluster Info:[     172.20.0.4 172.20.0.3 172.20.0.2 172.20.0.5]
-distributedservice4_1  | Cluster Info:[     172.20.0.4 172.20.0.3 172.20.0.2 172.20.0.5]
-
-```
+## Launch
+![Launch](https://github.com/aksinghdce/docker_compose_cluster/blob/master/doc/images/launch.PNG)
+## No Failure use case
+![No Failure use case](https://github.com/aksinghdce/docker_compose_cluster/blob/master/doc/images/No_Failure_Case.PNG)
 
 2. Plan:
+Need to fix a concurrency issue in the code. The issue can be seen when we try to update the group membership information after receiving the heartbeat from any peer. The error is basically a race condition with go maps.
+
+
+_*Explanation of the issue: The nodes that are running in State 3 have a problem of coupling between the layer that is responsible for maintaining the membership map and a lower layer that is responsible for sending udp packets to the peers. When the node running in State 3 is trying to consolidate the information received from a peer into it's own data structure it complains :" Attempt to read and write map at the same time "*_
+
 3. Test Plan:
-In response the leader checks if the node is a new node.
+There is a technical difficulty to impersonate a peer node in the test cases. Need to figure out an alternative.
 
 ## Getting Started
 
@@ -97,7 +57,7 @@ run:
 "docker-compose up --build"
 
 A cluster of docker containers is launched from docker-compose.yml configuration file. The hardcoded settings is to create
-5 docker containers from the same set of files located in "http_server1" directory.
+25 docker containers from the same set of files located in "http_server1" directory. We began working with 5 nodes and have been testing the setup informally with 10-25 nodes.
 
 ### Prerequisites
 
@@ -125,13 +85,13 @@ You can do a
 ```
 docker-compose ps
 ```
-to test whether the container got added
+to test whether the container got added to the docker-compose cluster already running
 
 ## Running the tests
 
 To run the tests on the cluster please follow the following steps:
 
-1. In a separate terminal (Don't use the terminal where you ran "docker-compose up --build") run "docker-compose ps"
+### In a separate terminal (Don't use the terminal where you ran "docker-compose up --build") run "docker-compose ps"
 
 
 ```
@@ -146,10 +106,10 @@ dockercomposecluster_grepservice5_1   distributedgrepserver   Up      8080/tcp
 ```
 
 
-2. The five machines would be shown in the first column of the output command. Copy the name of one of the machines on which you want to run grep. You will need to use the content in your clipboard in the next step.
+### The five machines would be shown in the first column of the output command. Copy the name of one of the machines on which you want to run grep. You will need to use the content in your clipboard in the next step.
 
-3. You will see the following output:
-
+### You will see the following output:
+#### This output also demonstrates distributed grep service functionality.
 
 ```
 PS C:\Users\aksin\go\src\docker_compose_cluster> docker exec dockercomposecluster_grepservice1_1 distributedgrep grep -c 8080 Dockerfile
@@ -184,37 +144,20 @@ The test cases are written for all the packages developed for this project. [Som
 The following test, tests the local node's grepping responsibility:
 ```
 PS C:\Users\aksin\go\src\docker_compose_cluster> docker exec dockercomposecluster_grepservice1_1 go test -v ./utilities
-=== RUN   TestCluster
---- PASS: TestCluster (0.00s)
-=== RUN   TestLocalGrep
-=== RUN   TestLocalGrep/exporting_8080_grepped
-=== RUN   TestLocalGrep/local_log_file_creation_grepped
---- PASS: TestLocalGrep (0.00s)
-    --- PASS: TestLocalGrep/exporting_8080_grepped (0.00s)
-    --- PASS: TestLocalGrep/local_log_file_creation_grepped (0.00s)
-=== RUN   ExampleLocalGrep
---- PASS: ExampleLocalGrep (0.00s)
-PASS
-ok      app/utilities   0.008s
 ```
+Note: I don't choose to maintain the outputs of the programs because they keep changing too very often; it makes the process of maintaining the outputs of the commands impractical.
 
 The following test, tests the http server's handler:
 ```
 PS C:\Users\aksin> docker exec dockercomposecluster_grepservice1_1 go test -v ./distributedgrepserver
-=== RUN   TestCommandHandler
---- PASS: TestCommandHandler (0.00s)
-PASS
-ok      app/distributedgrepserver       0.005s
 ```
 
+# Test of the membership service
+![Test of membership service](https://github.com/aksinghdce/docker_compose_cluster/blob/master/doc/images/Test.PNG)
 
 ### And coding style tests
 
-Explain what these tests test and why
-
-```
-Give an example
-```
+This is work in progress...
 
 ## Built With
 
