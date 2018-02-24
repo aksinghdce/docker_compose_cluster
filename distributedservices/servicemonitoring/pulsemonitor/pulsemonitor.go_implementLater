@@ -1,0 +1,107 @@
+package pulsemonitor
+
+/*
+Specification:
+Input: Send-Port and Receive-Port
+Output: Send Channel, Receive Channel
+
+TO-Do:
+The function must publish the time intravals at which it expects
+to receive inputs at the Send Channel from upper layers. Also,
+it also publishes the speed at which it will publish at the Receive
+channel.
+*/
+func Init(readPort string, writePort string) (<-chan interface{}, chan<- interface{}) {
+	receive := make(chan interface{}, 10)
+	send := make(chan interface{}, 10)
+	go listen(receive, readPort)
+	go broadcast(send, writePort)
+	return receive, send
+}
+/*
+Specification:
+Output: This function will return a channel to the caller. The caller can write
+objects of type utilities.Heartbeat on this channel.false
+
+Input: The function takes the address and the port it will send the data TO
+
+TO-DO: Write unit test for it.
+*/
+func SendHeartBeatMessages(ctx context.Context, toAddress, toPort string) chan utilities.HeartBeat {
+	heartbeatChannelIn := make(chan utilities.HeartBeat)
+	go func() {
+		toAddress += ":"
+		toAddress += toPort
+		toAddr, err := net.ResolveUDPAddr("udp", toAddress)
+		if err != nil {
+			utilities.Log(ctx, err.Error())
+		}
+		Conn, err := net.DialUDP("udp", nil, toAddr)
+		if err != nil {
+			//utilities.Log(ctx, err.Error())
+			fmt.Printf("Error DialUDP:%s\n", err.Error())
+			return
+		}
+		defer Conn.Close()
+		for {
+			select {
+			case hb := <-heartbeatChannelIn:
+				hb.FromTo.ToIp = toAddress
+				jsonData, err := json.Marshal(hb)
+				_, err = Conn.Write(jsonData)
+				if err != nil {
+					//utilities.Log(ctx, err.Error())
+					fmt.Printf("Conn.Write:%s\n", err.Error())
+					return
+				}
+			}
+		}
+	}()
+	return heartbeatChannelIn
+}
+
+/*
+Specification:
+Output: I return the channel on which you can listen to the acknowledgement given to ADD request
+Input: The udp port to listen on.
+*/
+func CatchUniCastDatagramsAndBounce(ctx context.Context, iListenOnPort string) chan utilities.HeartBeat {
+	/*I am the leader I will keep listening to events
+	from my group. And keep writing the response on the channel chout*/
+	c := make(chan utilities.HeartBeat)
+	//addrstr := string("224.0.0.1")
+	port, errconv := strconv.Atoi(iListenOnPort)
+	if errconv != nil {
+		utilities.Log(ctx, errconv.Error())
+	}
+	myaddr := &net.UDPAddr{Port: port}
+	
+
+	go func() {
+		conn, err := net.ListenUDP("udp", myaddr)
+		if err != nil {
+			utilities.Log(ctx, err.Error())
+		}
+		defer conn.Close()
+		for {
+
+			buf := make([]byte, 1024)
+			n, udpAddr, err2 := conn.ReadFromUDP(buf)
+			if err2 != nil {
+				utilities.Log(ctx, err2.Error())
+				continue
+			}
+			buf = buf[:n]
+			var Result utilities.HeartBeat
+			//fmt.Printf("Received:%v\n", string(buf))
+			errUnmarshal := json.Unmarshal(buf, &Result)
+			if errUnmarshal != nil {
+				utilities.Log(ctx, errUnmarshal.Error())
+				continue
+			}
+			Result.FromTo.FromIp = udpAddr.IP.String()
+			c <- Result
+		}
+	}()
+	return c
+}

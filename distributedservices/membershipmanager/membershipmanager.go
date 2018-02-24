@@ -250,7 +250,6 @@ func (erm *MManagerSingleton) WhomToSendHb() (string, error) {
 
 
 func (erm *MManagerSingleton) ConsolidateInfo(remoteMap map[string]bool) {
-	
 	if len(remoteMap) > len(erm.GroupInfo) {
 		for key, state := range remoteMap {
 			erm.GroupInfo[key] = state
@@ -402,8 +401,8 @@ func (erm *MManagerSingleton) ProcessInternalEvent(intev InternalEvent) bool {
 			case hbst := <-heartbeatChannelIn:
 				//fmt.Printf("I:%s have:%v and received:%v\n", erm.MyState.MyIp, erm.GroupInfo, hbst.Cluster)
 				if hbst.ReqCode == 3 {
-					//erm.ConsolidateInfo(hbst.Cluster)
-					erm.GroupInfo = hbst.Cluster
+					erm.ConsolidateInfo(hbst.Cluster)
+					//erm.GroupInfo = hbst.Cluster
 				}
 				ip_port := strings.Split(hbst.FromTo.ToIp, ":")
 				erm.MyState.MyIp = ip_port[0]
