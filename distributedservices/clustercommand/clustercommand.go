@@ -10,7 +10,8 @@ import (
 	of go project that would compile and run on linux containers
 
 	The project packages path for docker containers is mentioned in Dockerfile*/
-	"app/utilities"
+	"app/log"
+	"app/cluster"
 	"context"
 	"fmt"
 	"os"
@@ -26,25 +27,24 @@ Alert: The program doesn't support multiple words in the search pattern for grep
 */
 func main() {
 	ctx := context.Background()
-	utilities.Log(ctx, "Client began")
+	log.Log(ctx, "Client began")
 	argsWithProg := os.Args[1:]
 	if len(argsWithProg) < 2 {
-		utilities.Log(ctx, "distributedgrep <grep> <options> <pattern> <file>")
+		log.Log(ctx, "distributedgrep <grep> <options> <pattern> <file>")
 	}
 
 	switch {
 	case argsWithProg[0] == "grep":
-		var cluster utilities.Cluster
+		var cluster cluster.Cluster
 		//nodenames.txt is configuration file that contains the names of the nodes in the cluster
 		cluster.NewCluster("nodenames.txt")
 		fmt.Printf(cluster.Grep(argsWithProg))
 	case argsWithProg[0] == "membership":
-		var cluster utilities.Cluster
+		var cluster cluster.Cluster
 		//nodenames.txt is configuration file that contains the names of the nodes in the cluster
 		cluster.NewCluster("nodenames.txt")
-		fmt.Printf(cluster.Membership(argsWithProg))
 	default:
-		utilities.Log(ctx, "Panic: Wasn't a grep command")
+		log.Log(ctx, "Panic: Wasn't a grep command")
 	}
 
 }

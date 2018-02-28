@@ -1,4 +1,4 @@
-package utilities
+package log
 
 import (
 	"context"
