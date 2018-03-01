@@ -44,10 +44,7 @@ func Comm(ctx context.Context, receiveport, sendport  int) (chan Packet, chan Pa
 }
 
 func listener(ctx context.Context, listenChannel chan Packet, port int) {
-	myaddr := &net.UDPAddr{
-		IP: net.ParseIP("0.0.0.0"),
-		Port: port,
-	}
+	myaddr := &net.UDPAddr{Port: port}
 	conn, err := net.ListenUDP("udp", myaddr)
 	if err != nil {
 		log.Log(ctx, err.Error())
@@ -55,13 +52,11 @@ func listener(ctx context.Context, listenChannel chan Packet, port int) {
 	defer conn.Close()
 	for {
 		buf := make([]byte, 1024)
-		fmt.Printf("ReadFromUDP being called now\n")
 		n, _, err := conn.ReadFromUDP(buf)
 		if err != nil {
 			log.Log(ctx, err.Error())
 			continue
 		}
-		fmt.Printf("Read %d bytes\n", n)
 		buf = buf[:n]
 		var Result Packet
 		err = json.Unmarshal(buf, &Result)
@@ -69,7 +64,6 @@ func listener(ctx context.Context, listenChannel chan Packet, port int) {
 			log.Log(ctx, err.Error())
 			continue
 		}
-		fmt.Printf("Added %v on listener channel\n", Result)
 		listenChannel <- Result
 	}		
 }
