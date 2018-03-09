@@ -1,4 +1,4 @@
-package utilities
+package cluster
 
 import "testing"
 

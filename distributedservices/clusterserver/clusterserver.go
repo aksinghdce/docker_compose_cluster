@@ -1,12 +1,11 @@
 package main
 
 import (
-	"app/membershipmanager"
+	"app/log"
 	"app/utilities"
 	"context"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"math/rand"
 	"net/http"
 	"net/url"
@@ -21,24 +20,7 @@ func main() {
 	*/
 	Context := context.Background()
 	startTime := time.Now()
-	utilities.Log(Context, startTime.String())
-
-	go func(ctxt context.Context) {
-		mmm := membershipmanager.GetInstance()
-		//mmm := membershipmanager.NewMembershipManager(state)
-		internaleventforstate1 := membershipmanager.InternalEvent{
-			RequestNumber: 1,
-			Ctx:           ctxt,
-		}
-		utilities.Log(Context, startTime.String(), "Changing State")
-		utilities.Log(Context, startTime.String(), "My current State:", string(mmm.MyState.CurrentState))
-		// The following function is an infinite loop in State 1 and State 2
-		rerun := mmm.ProcessInternalEvent(internaleventforstate1)
-		for rerun {
-			rerun = mmm.ProcessInternalEvent(internaleventforstate1)
-		}
-		fmt.Printf("rerun is false\n")
-	}(Context)
+	log.Log(Context, startTime.String())
 
 	/**
 	1. Get a grep request from peer, parse it
@@ -50,12 +32,12 @@ func main() {
 
 func handler() http.Handler {
 	r := http.NewServeMux()
-	r.HandleFunc("/grep", utilities.DecorateWithLog(commandHandler))
+	r.HandleFunc("/grep", log.DecorateWithLog(commandHandler))
 	// TO-DO : Add a handler function (with a specification comment)
 	// similar to the commandHandler to send data from peers to MembershipManager
 	// send appropriate data about the peer to the membership service to service
 	// 3 kinds of events, as described in the assignment statement.
-	r.HandleFunc("/membership/get", utilities.DecorateWithLog(membershipAddHandler))
+	r.HandleFunc("/membership/get", log.DecorateWithLog(membershipAddHandler))
 	return r
 }
 
@@ -76,9 +58,9 @@ func commandHandler(resWriter http.ResponseWriter, r *http.Request) {
 	*/
 	text := r.FormValue("grep")
 	if text == "" {
-		utilities.Log(ctx, "Missiong request form value")
+		log.Log(ctx, "Missiong request form value")
 	}
-	utilities.Log(ctx, "test in Request Form: %s", text)
+	log.Log(ctx, "test in Request Form: %s", text)
 	/* The above lines of code is to test that whether I
 	am using the standard way of passing values from the client.
 
@@ -89,16 +71,16 @@ func commandHandler(resWriter http.ResponseWriter, r *http.Request) {
 
 	bodyBuff, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		log.Fatal(err)
+		log.Log(ctx, err.Error())
 	}
 	m, err := url.ParseQuery(string(bodyBuff))
 	if err != nil {
-		log.Fatal(err)
+		log.Log(ctx, err.Error())
 	}
 
 	grepCommand := m.Get("grep")
 	grepresult := utilities.LocalGrep(strings.Split(grepCommand, " "))
-	utilities.Log(ctx, grepCommand)
+	log.Log(ctx, grepCommand)
 	fmt.Fprint(resWriter, grepresult)
 }
 
@@ -106,6 +88,6 @@ func membershipAddHandler(resWriter http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	ctx := r.Context()
 	ctx = context.WithValue(ctx, int(42), rand.Int63())
-	mmm := membershipmanager.GetInstance()
-	fmt.Fprint(resWriter, fmt.Sprintf("\n%v\n",mmm.GroupInfo))
+	
+	fmt.Fprint(resWriter, fmt.Sprintf("\n%v\n","this is silly"))
 }

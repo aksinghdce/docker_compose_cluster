@@ -17,7 +17,8 @@ import (
 
 /*
 Name: localGrep
-Input: command, search pattern, filename
+Input: an array of strings that has first element:command,
+		followed by options, search pattern and filename
 Output: Channel of strings that carries grep command output
 */
 func LocalGrep(arguments []string) string {
@@ -32,7 +33,7 @@ func LocalGrep(arguments []string) string {
 
 /*
 Name: remoteGrep
-Input: machine's hostname to be grepped, grep command
+Input: machine's hostname to be grepped and grep command
 Output: A channel that receives remote grep output
 */
 func RemoteGrep(machine string, cmd url.Values) <-chan string {
@@ -60,24 +61,6 @@ func RemoteGrep(machine string, cmd url.Values) <-chan string {
 	return c
 }
 
-/*
-Specification: This function is called on a Node
-to enquire about it's membership list
-
-Name:
-Input:
-Output:
-*/
-func LocalMembership(machine string, cmd url.Values) <-chan string {
-	c := make(chan string)
-	go func() {
-		/*
-			Get membership list from a node that is listening on machine:8080
-		*/
-		c <- "dummy"
-	}()
-	return c
-}
 
 func ReadConfig(path string) *list.List {
 	l := list.New()

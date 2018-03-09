@@ -8,6 +8,7 @@ Read a more dynamic document of this README : https://tinyurl.com/ybhw2kpc
 # Features
 Assignment 1 : Distributed grep
 Assignment 2 : Membership service
+Assignment 3 : A distributed Filesystem
 
 # Distributed grep
 
@@ -34,6 +35,29 @@ This work is not 100% complete. We are yet to fix a defect. We will describe the
 
 ![Design Diagram](https://github.com/aksinghdce/docker_compose_cluster/blob/assignment2/doc/images/Overall%20design%20of%20membership%20service.png)
 
+# Distributed Filesystem
+
+For distributed filesystem we are planning to implement the "Chord" protocol. In the first iteration we will develop a protocol on top of Chord to save and retrieve an ASCII file.
+We are planning to use protocol buffers for the first time for communication needs within our programs. This will help us avoid bugs in our code and increase the robustness of our service by inheriting great quality and labourously engineered protocol buffers to support distributed computing communication needs.
+Protocol buffers will provide a reusable interface for a variety of needs of a distributed filesystem:
+
+1. Heartbeat messages : We need heartbeating among peers to maintain the "peer-to-peer" membership state
+2. Save File:
+3. Retrieve File
+4. Add membership request
+5. Remove membership request
+
+Advantages of using protocol buffers:
+
+1. Code reuse
+2. faster encoding and decoding
+3. Lesser bugs
+4. [Protocol buffers follow end-to-end design principle and is makde for general use as a fundamental unit for communication needs.](https://developers.google.com/protocol-buffers/docs/techniques#large-data)
+5. For our use we can support filesize of a medium size image file.
+
+**We will reuse the code of our membership service. The membership service has a defect that needs to be fixed. We were not using a map in go that was robust for concurrent use. We need to fix this.**
+
+
 # Runtime
 ## Launch
 ![Launch](https://github.com/aksinghdce/docker_compose_cluster/blob/master/doc/images/launch.PNG)
@@ -41,7 +65,7 @@ This work is not 100% complete. We are yet to fix a defect. We will describe the
 ![No Failure use case](https://github.com/aksinghdce/docker_compose_cluster/blob/master/doc/images/No_Failure_Case.PNG)
 
 2. Plan:
-Need to fix a concurrency issue in the code. The issue can be seen when we try to update the group membership information after receiving the heartbeat from any peer. The error is basically a race condition with go maps.
+**Need to fix a concurrency issue in the code. The issue can be seen when we try to update the group membership information after receiving the heartbeat from any peer. The error is basically a race condition with go maps.**
 
 
 _*Explanation of the issue: The nodes that are running in State 3 have a problem of coupling between the layer that is responsible for maintaining the membership map and a lower layer that is responsible for sending udp packets to the peers. When the node running in State 3 is trying to consolidate the information received from a peer into it's own data structure it complains :" Attempt to read and write map at the same time "*_
