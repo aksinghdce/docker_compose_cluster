@@ -17,10 +17,6 @@ type Membership struct{
 	ring list.List
 }
 
-// func (m *Membership) init() {
-// 	m.ring = new list.New()
-// }
-
 func (m *Membership) Insert(key string, value interface{}) bool {
 	return false
 }
