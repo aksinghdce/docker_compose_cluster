@@ -40,6 +40,13 @@ func (m *Membership) KeepMembershipUpdated() (chan utilities.Packet, chan utilit
 		Seq: rand.Int63(),
 	}
 	go func() {
+		/*This go routine will listen for incoming packet.
+		If the incoming packet is an "ADD" request, it will update the extended ring
+		If the incoming packet is a "REMOVE" request, it will update the extended ring
+		If the incoming packet denotes heartbeat miss, then it will update the extended ring
+		
+		After updating the ring, it will send heartbeat messages to a subset of nodes in the
+		extended ring*/
 		for {
 			m.chanOut <- packet
 			fmt.Printf("Received:%v\n", <-m.chanIn)

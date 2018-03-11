@@ -10,10 +10,7 @@ func TestMembership(t *testing.T) {
 		chanIn : make(chan utilities.Packet),
 		chanOut : make(chan utilities.Packet),
 	}
-
-	cin, cout := m.KeepMembershipUpdated()
-	
-	
+	cin, cout := m.KeepMembershipUpdated()	
 	for i:=0; i<10; i++ {
 		t.Logf("Received in test:%v", <-cin)
 		cout <- utilities.Packet{}
