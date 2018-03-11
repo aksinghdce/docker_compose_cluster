@@ -2,6 +2,7 @@ package communication
 
 import (
 	"testing"
+	"app/membership/utilities"
 	"context"
 	"net"
 	"math/rand"
@@ -54,12 +55,12 @@ func TestUDPServer(t *testing.T) {
 	listenChannel, speakChannel := Comm(ctx, 50000, 50000)
 	for caseNumber, tt := range udpServerTests {
 		fmt.Printf("Running Test Number:%d\n", caseNumber)
-		packet := Packet{
+		packet := utilities.Packet{
 			FromIp: net.ParseIP(tt.taddr),
 			ToIp: net.ParseIP(tt.saddr),
 			Seq: rand.Int63(),
 		}
-		var receivedPacket Packet
+		var receivedPacket utilities.Packet
 		for i := 0; i<5; i++ {
 			//Sending test packet
 			speakChannel <- packet
