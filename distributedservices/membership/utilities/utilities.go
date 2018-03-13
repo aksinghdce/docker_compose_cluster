@@ -53,5 +53,6 @@ type Packet struct {
 		stores the extended ring with the 
 		heartbeat status
 	*/
+	Req int
 	Data []Node
 }

@@ -56,11 +56,11 @@ func speaker(ctx context.Context, dialChannel chan utilities.Packet, port int) {
 	//Might require an error check in the next instruction
 	toAddress := &net.UDPAddr{IP: sendThisPacket.ToIp, Port: port}
 	Conn, err := net.DialUDP("udp", nil, toAddress)
-	if err != nil {
-		fmt.Printf("Error DialUDP:%s\n", err.Error())
-		return
-	}
-	defer Conn.Close()
+		if err != nil {
+			fmt.Printf("Error DialUDP:%s\n", err.Error())
+			return
+		}
+		defer Conn.Close()
 	for {
 		timeout := time.After(100 * time.Millisecond)
 		select {

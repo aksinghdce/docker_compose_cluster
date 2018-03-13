@@ -1,10 +1,72 @@
 package fsm
 
+import (
+	"app/membership/communication"
+	"fmt"
+	"app/membership/utilities"
+	"context"
+	"net"
+	"math/rand"
+)
+
 /*This module is responsible for managing heartbeats
 */
 
 type Fsm struct {
 	State int
+}
+
+func Init(initialState int) *Fsm {
+	instance := &Fsm{
+		State : initialState,
+	}
+	
+	// hostname, err := os.Hostname()
+	// if err != nil {
+	// 	fmt.Println("Error getting hostname")
+	// }
+	// if hostname == "leader.assignment2" {
+	// 	instance.State = 1
+	// } else {
+	// 	instance.State = 2
+	// }	
+	return instance
+}
+
+
+func (fsm *Fsm) ProcessFsm() bool {
+	switch {
+	case fsm.State == 1:
+		//Listen for "ADD" requests from peers
+		//Forward the request to Membership service
+		//Send Ack back to the peer
+		ctx := context.Background()
+		listenChannel, _ := communication.Comm(ctx, 50003, 50004)
+		go func() {
+			for i:=0;i<10; i++ {
+				fmt.Printf("Received in State 1:%v\n", <-listenChannel)
+			}
+		}()
+		
+		ProcessEvent()
+	case fsm.State == 2:
+		ctx := context.Background()
+		_, speakChannel := communication.Comm(ctx, 50003, 50004)
+		go func() {
+			for i:=0; i<10; i++ {
+				fmt.Printf("Sending Packet from State 2\n")
+				speakChannel <- utilities.Packet{
+					FromIp: net.ParseIP("[::ffff:0.0.0.0]:0"),
+					ToIp: net.ParseIP("[::]:0"),
+					Seq: rand.Int63(),
+					Req: 1,
+				}
+			}
+		}()
+		
+		ProcessEvent()
+	}
+	return true
 }
 
 /*
