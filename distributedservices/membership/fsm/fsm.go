@@ -41,7 +41,7 @@ func (fsm *Fsm) ProcessFsm() bool {
 		//Forward the request to Membership service
 		//Send Ack back to the peer
 		ctx := context.Background()
-		listenChannel, _ := communication.Comm(ctx, 10001, 10001)
+		listenChannel, _ := communication.Comm(ctx, 50000, 50000)
 		go func() {
 			for i:=0;i<10; i++ {
 				fmt.Printf("Received in State 1:%v\n", <-listenChannel)
@@ -51,7 +51,7 @@ func (fsm *Fsm) ProcessFsm() bool {
 		ProcessEvent()
 	case fsm.State == 2:
 		ctx := context.Background()
-		_, speakChannel := communication.Comm(ctx, 10001, 10001)
+		_, speakChannel := communication.Comm(ctx, 50000, 50000)
 		go func() {
 			for i:=0; i<10; i++ {
 				fmt.Printf("Sending Packet from State 2\n")
