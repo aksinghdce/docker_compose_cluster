@@ -70,7 +70,7 @@ func TestFsm(t *testing.T) {
 			Seq: rand.Int63(),
 		}
 		var receivedPacket utilities.Packet
-		for i := 0; i<5; i++ {
+		for i := 0; i<5000; i++ {
 			//Sending test packet
 			speakChannel <- packet
 			timeout := time.After(10 * time.Second)
