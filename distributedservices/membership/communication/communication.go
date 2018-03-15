@@ -8,6 +8,7 @@ import (
 	"net"
 	"fmt"
 	"time"
+	"io"
 )
 
 /*
@@ -15,28 +16,61 @@ import (
 func Comm(ctx context.Context, receiveport, sendport  int) (chan utilities.Packet, chan utilities.Packet) {
 	listen := make(chan utilities.Packet)
 	speak := make(chan utilities.Packet)
-	
 	//go routine that will listen for incoming datagrams and return channel as first
 	//item in the output
-	go listener(ctx, listen, receiveport)
-
+	go func() {
+		rerun := false
+		for {
+			time.Sleep(10 * time.Millisecond)
+			if rerun == false {
+				rerun = listener(ctx, listen, receiveport)
+			}
+		}
+	}()
 	//go routine that will speak out to the world at large, whatever it receives 
 	//on the second output channel
-	go speaker(ctx, speak, sendport)
+	go func() {
+		rerun := false
+		for {
+			time.Sleep(10 * time.Millisecond)
+			if rerun == false {
+				rerun = speaker(ctx, speak, sendport)
+			}
+		}
+	}()
 	return listen, speak
 }
 
-func listener(ctx context.Context, listenChannel chan utilities.Packet, port int) {
+
+func Close(c io.Closer) bool{
+	err := c.Close()
+	if err != nil {
+		fmt.Printf("Error in Comm Close:%v\n", err)
+	}
+	return false
+}
+
+func listener(ctx context.Context, listenChannel chan utilities.Packet, port int) bool{
 	myaddr := &net.UDPAddr{Port: port}
 	conn, err := net.ListenUDP("udp", myaddr)
 	if err != nil {
+		fmt.Printf("Error in Comm ListenUDP:%v\n", err)
 		log.Log(ctx, err.Error())
+		return false
 	}
-	defer conn.Close()
+	conn.SetReadBuffer(1048576)
+
+	defer func() {
+		Close(conn)
+	}()
+	
+
 	for {
+		
 		buf := make([]byte, 1024)
 		n, _, err := conn.ReadFromUDP(buf)
 		if err != nil {
+			fmt.Printf("Error in Comm ReadFromUDP:%v\n", err)
 			log.Log(ctx, err.Error())
 			continue
 		}
@@ -48,20 +82,26 @@ func listener(ctx context.Context, listenChannel chan utilities.Packet, port int
 			continue
 		}
 		listenChannel <- Result
-	}		
+	}
+	return true		
 }
 
-func speaker(ctx context.Context, dialChannel chan utilities.Packet, port int) {
+func speaker(ctx context.Context, dialChannel chan utilities.Packet, port int) bool{
 	sendThisPacket := <-dialChannel
 	//Might require an error check in the next instruction
 	toAddress := &net.UDPAddr{IP: sendThisPacket.ToIp, Port: port}
 	Conn, err := net.DialUDP("udp", nil, toAddress)
-		if err != nil {
-			fmt.Printf("Error DialUDP:%s\n", err.Error())
-			return
-		}
-		defer Conn.Close()
+	if err != nil {
+		fmt.Printf("Error DialUDP:%s\n", err.Error())
+		return false
+	}
+
+	defer func() {
+		Close(Conn)
+	}()
+	
 	for {
+		
 		timeout := time.After(100 * time.Millisecond)
 		select {
 		case <-timeout : 
@@ -74,10 +114,11 @@ func speaker(ctx context.Context, dialChannel chan utilities.Packet, port int) {
 			_, err = Conn.Write(jsonData)
 			if err != nil {
 				fmt.Printf("Conn.Write:%s\n", err.Error())
-				return
+				return false
 			}
 			// Be ready for next iteration
 			sendThisPacket = <-dialChannel
 		}
 	}
+	return true
 }

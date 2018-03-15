@@ -34,39 +34,36 @@ func Init(initialState int) *Fsm {
 }
 
 
-func (fsm *Fsm) ProcessFsm() bool {
+func (fsm *Fsm) ProcessFsm() {
+	ctx := context.Background()
+		listenChannel, speakChannel := communication.Comm(ctx, 10001, 10001)
 	switch {
 	case fsm.State == 1:
 		//Listen for "ADD" requests from peers
 		//Forward the request to Membership service
 		//Send Ack back to the peer
-		ctx := context.Background()
-		listenChannel, _ := communication.Comm(ctx, 50000, 50000)
 		go func() {
 			for i:=0;i<10; i++ {
 				fmt.Printf("Received in State 1:%v\n", <-listenChannel)
 			}
 		}()
 		
-		ProcessEvent()
+		//ProcessEvent()
 	case fsm.State == 2:
-		ctx := context.Background()
-		_, speakChannel := communication.Comm(ctx, 50000, 50000)
 		go func() {
 			for i:=0; i<10; i++ {
 				fmt.Printf("Sending Packet from State 2\n")
 				speakChannel <- utilities.Packet{
-					FromIp: net.ParseIP("[::ffff:0.0.0.0]:0"),
-					ToIp: net.ParseIP("[::]:0"),
+					FromIp: net.ParseIP("127.0.0.1"),
+					ToIp: net.ParseIP("127.0.0.1"),
 					Seq: rand.Int63(),
 					Req: 1,
 				}
 			}
 		}()
 		
-		ProcessEvent()
+		//ProcessEvent()
 	}
-	return true
 }
 
 /*
