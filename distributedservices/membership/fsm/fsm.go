@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"app/membership/utilities"
 	"context"
-	"net"
 	"math/rand"
+	"errors"
+	"app/log"
 )
 
 /*This module is responsible for managing heartbeats
@@ -34,36 +35,67 @@ func Init(initialState int) *Fsm {
 }
 
 
-func (fsm *Fsm) ProcessFsm() {
-	ctx := context.Background()
-		listenChannel, speakChannel := communication.Comm(ctx, 10001, 10001)
+func (fsm *Fsm) ProcessFsm() (error, int){
+	
 	switch {
 	case fsm.State == 1:
 		//Listen for "ADD" requests from peers
 		//Forward the request to Membership service
 		//Send Ack back to the peer
-		go func() {
-			for i:=0;i<10; i++ {
-				fmt.Printf("Received in State 1:%v\n", <-listenChannel)
+		ctx := context.Background()
+		listenChannel, speakChannel := communication.Comm(ctx, 10001, 10002)
+		go func() error{
+			for {
+				select {
+				case receivedHbPacket := <-listenChannel:
+					fmt.Printf("Recceived %v\n", receivedHbPacket)
+					if receivedHbPacket.Req == 1 {
+						log.Log(ctx, fmt.Sprintf("Received ADD request from IP:%s\n", receivedHbPacket.FromIp.String()))
+						ips := utilities.MyIpAddress()
+						if len(ips) <= 0 {
+							return errors.New("Error accessing local ip address")
+						}
+						speakChannel <- utilities.Packet{
+							FromIp: ips[0],
+							ToIp: receivedHbPacket.FromIp,
+							Seq: rand.Int63(),
+							Req: 2,
+						}	
+					}
+				}
 			}
+			return nil
 		}()
-		
-		//ProcessEvent()
 	case fsm.State == 2:
-		go func() {
-			for i:=0; i<10; i++ {
+		ctx := context.Background()
+		listenChannel, speakChannel := communication.Comm(ctx, 10002, 10001)
+		for{
+			select {
+			case receivedHbPacket := <-listenChannel :
+				fmt.Printf("Receiver in STATE 2%v\n", receivedHbPacket)
+				if receivedHbPacket.Req == 2 {
+					return nil, 3
+				}
+			default:
 				fmt.Printf("Sending Packet from State 2\n")
+				ips := utilities.MyIpAddress()
+				if len(ips) <= 0 {
+					return errors.New("Error accessing local ip address"), 2
+				}
 				speakChannel <- utilities.Packet{
-					FromIp: net.ParseIP("127.0.0.1"),
-					ToIp: net.ParseIP("127.0.0.1"),
+					FromIp: ips[0],
+					ToIp: ips[0],
 					Seq: rand.Int63(),
 					Req: 1,
 				}
 			}
-		}()
+			
+		}
 		
-		//ProcessEvent()
+	case fsm.State == 3:
+		fmt.Printf("Moved to state 3\n")
 	}
+	return nil, fsm.State
 }
 
 /*

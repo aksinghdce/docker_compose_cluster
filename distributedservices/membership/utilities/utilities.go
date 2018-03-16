@@ -3,6 +3,8 @@ package utilities
 import (
 	"sync/atomic"
 	"net"
+	"os"
+	"fmt"
 )
 
 /*
@@ -23,6 +25,9 @@ http://www.ifsq.org/single-point-of-maintenance.html
 
 */
 
+/************************************************************************************
+Sequence counter
+************************************************************************************/
 type count64 int64
 
 type vectorClock struct{
@@ -38,11 +43,17 @@ func (c *count64) get() int64 {
 	return atomic.LoadInt64((*int64)(c))
 }
 
+/************************************************************************************
+A Node in the chord;s extended ring
+************************************************************************************/
 type Node struct {
 	Ip string
 	Alive bool
 }
 
+/************************************************************************************
+A heartbeat packet
+************************************************************************************/
 type Packet struct {
 	FromIp net.IP //the fromip 
 	ToIp net.IP //and toip required - udp packets
@@ -55,4 +66,35 @@ type Packet struct {
 	*/
 	Req int
 	Data []Node
+}
+
+func MyIpAddress() []net.IP{
+	ifaces, err := net.Interfaces()
+	// handle err
+	if err != nil {
+		fmt.Printf("Error:%v\n", err)
+		os.Exit(1)
+	}
+	ips := make([]net.IP, 0)
+	for _, i := range ifaces {
+    	addrs, err := i.Addrs()
+		// handle err
+		if err != nil {
+			fmt.Printf("Error:%v\n", err)
+			os.Exit(1)
+		}
+		var ip net.IP
+    	for _, addr := range addrs {
+        		switch v := addr.(type) {
+        		case *net.IPNet:
+                	ip = v.IP
+        		case *net.IPAddr:
+            	    ip = v.IP
+			}
+			if (ip.String() != "127.0.0.1") {
+				ips = append(ips, ip)
+			}
+    	}
+	}
+	return ips
 }

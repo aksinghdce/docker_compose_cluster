@@ -24,7 +24,11 @@ func TestFsm(t *testing.T) {
     fsm1 := Init(1)
     fsm2 := Init(2)
     fsm1.ProcessFsm()
-    fsm2.ProcessFsm()
+    err, newState := fsm2.ProcessFsm()
+    if err == nil {
+        fsm2 = Init(newState)
+        fsm2.ProcessFsm()
+    }
     //Run communication test in parallel to do some stress testing
     //Because 
     go func() {
