@@ -41,7 +41,7 @@ func TestFsm(t *testing.T) {
 			Seq: rand.Int63(),
 		}
 		var receivedPacket utilities.Packet
-		    for i := 0; i<500; i++ {
+		    for i := 0; i<5; i++ {
 			    //Sending or Receive test packet
 			    select {
 				//Receiving test packet

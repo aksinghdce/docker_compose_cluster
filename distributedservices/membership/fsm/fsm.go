@@ -66,6 +66,30 @@ func (fsm *Fsm) ProcessFsm() (error, int){
 			}
 			return nil
 		}()
+
+		listenChannel2, speakChannel2 := communication.Comm(ctx, 50001, 50002)
+		go func() error{
+			for {
+				select {
+				case receivedHbPacket := <-listenChannel2:
+					fmt.Printf("Recceived %v\n", receivedHbPacket)
+					if receivedHbPacket.Req == 3 {
+						log.Log(ctx, fmt.Sprintf("Received ADD request from IP:%s\n", receivedHbPacket.FromIp.String()))
+						ips := utilities.MyIpAddress()
+						if len(ips) <= 0 {
+							return errors.New("Error accessing local ip address")
+						}
+						speakChannel2 <- utilities.Packet{
+							FromIp: ips[0],
+							ToIp: receivedHbPacket.FromIp,
+							Seq: rand.Int63(),
+							Req: 3,
+						}	
+					}
+				}
+			}
+			return nil
+		}()
 	case fsm.State == 2:
 		ctx := context.Background()
 		listenChannel, speakChannel := communication.Comm(ctx, 10002, 10001)
@@ -94,6 +118,30 @@ func (fsm *Fsm) ProcessFsm() (error, int){
 		
 	case fsm.State == 3:
 		fmt.Printf("Moved to state 3\n")
+		ctx := context.Background()
+		listenChannel2, speakChannel2 := communication.Comm(ctx, 50002, 50001)
+		go func() error{
+			for {
+				select {
+				case receivedHbPacket := <-listenChannel2:
+					fmt.Printf("Recceived %v\n", receivedHbPacket)
+					if receivedHbPacket.Req == 3 {
+						log.Log(ctx, fmt.Sprintf("Received ADD request from IP:%s\n", receivedHbPacket.FromIp.String()))
+						ips := utilities.MyIpAddress()
+						if len(ips) <= 0 {
+							return errors.New("Error accessing local ip address")
+						}
+						speakChannel2 <- utilities.Packet{
+							FromIp: ips[0],
+							ToIp: receivedHbPacket.FromIp,
+							Seq: rand.Int63(),
+							Req: 3,
+						}	
+					}
+				}
+			}
+			return nil
+		}()
 	}
 	return nil, fsm.State
 }
