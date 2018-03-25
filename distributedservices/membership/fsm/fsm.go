@@ -90,6 +90,7 @@ func (fsm *Fsm) ProcessFsm() (error, int){
 			case receivedHbPacket := <-listenChannel :
 				if receivedHbPacket.Req == 2 {
 					fmt.Printf("Received ACK in STATE 2%v\n", receivedHbPacket)
+					/*Send ADD event to Membership.go*/
 					/*Move to state 3*/
 					return nil, 3
 				}
@@ -119,7 +120,9 @@ func (fsm *Fsm) ProcessFsm() (error, int){
 				case receivedHbPacket := <-listenChannel2:
 					if receivedHbPacket.Req == 3 {
 						fmt.Printf("Received Heartbeat %v\n", receivedHbPacket)	
+						/*Inform Membership.go*/
 					}
+				/*Find out the ip address of machines to send HB to*/
 				}
 			}
 			return nil
