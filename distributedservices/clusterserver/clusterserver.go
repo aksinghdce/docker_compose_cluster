@@ -3,6 +3,7 @@ package main
 import (
 	"app/log"
 	"app/utilities"
+	"app/membership/fsm"
 	"context"
 	"fmt"
 	"io/ioutil"
@@ -11,6 +12,7 @@ import (
 	"net/url"
 	"strings"
 	"time"
+	"os"
 )
 
 func main() {
@@ -21,6 +23,23 @@ func main() {
 	Context := context.Background()
 	startTime := time.Now()
 	log.Log(Context, startTime.String())
+
+	host, err := os.Hostname()
+	if err != nil {
+		fmt.Printf("Error:%s\n", err.Error())
+	}
+	fmt.Printf("HOSTNAME:%v\n", host)
+	if host == "leader.assignment2" {
+		fsm1 := fsm.Init(1)
+		fsm1.ProcessFsm()
+	} else {
+		fsm2 := fsm.Init(2)
+    	err, newState := fsm2.ProcessFsm()
+    	if err == nil {
+        	fsm2 = fsm.Init(newState)
+        	fsm2.ProcessFsm()
+    	}
+	}
 
 	/**
 	1. Get a grep request from peer, parse it
@@ -88,6 +107,9 @@ func membershipAddHandler(resWriter http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	ctx := r.Context()
 	ctx = context.WithValue(ctx, int(42), rand.Int63())
-	
-	fmt.Fprint(resWriter, fmt.Sprintf("\n%v\n","this is silly"))
+	host, err := os.Hostname()
+	if err != nil {
+		fmt.Printf("Error:%s\n", err.Error())
+	}
+	fmt.Fprint(resWriter, fmt.Sprintf("\n%v\n", host))
 }

@@ -39,6 +39,7 @@ func (m *Membership) KeepMembershipUpdated() (chan utilities.Packet, chan utilit
 		ToIp: net.ParseIP("127.0.0.2"),
 		Seq: rand.Int63(),
 	}
+	
 	go func() {
 		/*This go routine will listen for incoming packet.
 		If the incoming packet is an "ADD" request, it will update the extended ring
@@ -48,8 +49,11 @@ func (m *Membership) KeepMembershipUpdated() (chan utilities.Packet, chan utilit
 		After updating the ring, it will send heartbeat messages to a subset of nodes in the
 		extended ring*/
 		for {
-			m.chanOut <- packet
-			fmt.Printf("Received:%v\n", <-m.chanIn)
+			select {
+			case receivedEvent := <-m.chanIn:
+				fmt.Printf("Received:%v\n", receivedEvent)
+				m.chanOut <- packet
+			}
 		}
 	}()
 	return m.chanOut, m.chanIn

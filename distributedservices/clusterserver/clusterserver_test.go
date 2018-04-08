@@ -1,7 +1,7 @@
 package main
 
 import (
-	"app/utilities"
+	"app/log"
 	"bytes"
 	"context"
 	"fmt"
@@ -20,7 +20,7 @@ func TestCommandHandler(t *testing.T) {
 	cmd.Add("grep", strings.Join(cmdstrings, " "))
 	req, err := http.NewRequest("POST", "http://localhost:8080/grep", strings.NewReader(cmd.Encode()))
 	if err != nil {
-		utilities.Log(context.Background(), "Error creating test request")
+		log.Log(context.Background(), "Error creating test request")
 	}
 
 	//We will send this request to the handler we are testing
@@ -53,7 +53,7 @@ func TestRouting(t *testing.T) {
 	s := httptest.NewServer(h)
 	defer s.Close()
 
-	res, err := http.Get(fmt.Sprintf("%s/membership/add", s.URL))
+	res, err := http.Get(fmt.Sprintf("%s/membership/get", s.URL))
 	if err != nil {
 		t.Fatalf("could not send Get request %v", err)
 	}

@@ -1,19 +1,40 @@
-version: '3'
+version: '2.1'
 
 services:
   distributedservice1:
     build: ./distributedservices/.
     hostname: leader
     domainname: assignment2
+    networks:
+      app_net:
+        ipv4_address: 172.16.238.2
   distributedservice2:
     build: ./distributedservices/.
     hostname: node2
     domainname: assignment2
+    networks:
+      app_net:
+        ipv4_address: 172.16.238.3
   distributedservice3:
     build: ./distributedservices/.
     hostname: node3
     domainname: assignment2
+    networks:
+      app_net:
+        ipv4_address: 172.16.238.4
   distributedservice4:
     build: ./distributedservices/.
     hostname: node4
     domainname: assignment2
+    networks:
+      app_net:
+        ipv4_address: 172.16.238.5
+networks:
+  app_net:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+      -
+        subnet: 172.16.238.0/24
+      

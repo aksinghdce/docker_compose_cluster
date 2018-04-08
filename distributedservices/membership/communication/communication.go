@@ -51,7 +51,15 @@ func Close(c io.Closer) bool{
 }
 
 func listener(ctx context.Context, listenChannel chan utilities.Packet, port int) bool{
-	myaddr := &net.UDPAddr{Port: port}
+	ips := utilities.MyIpAddress()
+	if len(ips) <= 0 {
+		return false
+	}
+	fmt.Printf("LISTENING on %s\n", ips[0])
+	myaddr := &net.UDPAddr{
+		IP: ips[0],
+		Port: port,
+	}
 	conn, err := net.ListenUDP("udp", myaddr)
 	if err != nil {
 		fmt.Printf("Error in Comm ListenUDP:%v\n", err)
@@ -63,14 +71,12 @@ func listener(ctx context.Context, listenChannel chan utilities.Packet, port int
 	defer func() {
 		Close(conn)
 	}()
-	
-
 	for {
-		
 		buf := make([]byte, 1024)
+		fmt.Printf("Trying to Listen\n")
 		n, _, err := conn.ReadFromUDP(buf)
 		if err != nil {
-			fmt.Printf("Error in Comm ReadFromUDP:%v\n", err)
+			fmt.Printf("Error-Conn-ReadFromUDP:%v\n", err)
 			log.Log(ctx, err.Error())
 			continue
 		}
@@ -100,8 +106,7 @@ func speaker(ctx context.Context, dialChannel chan utilities.Packet, port int) b
 		Close(Conn)
 	}()
 	
-	for {
-		
+	for {	
 		timeout := time.After(100 * time.Millisecond)
 		select {
 		case <-timeout : 
@@ -113,7 +118,7 @@ func speaker(ctx context.Context, dialChannel chan utilities.Packet, port int) b
 			}
 			_, err = Conn.Write(jsonData)
 			if err != nil {
-				fmt.Printf("Conn.Write:%s\n", err.Error())
+				fmt.Printf("Conn.Write:%v\n", err)
 				return false
 			}
 			// Be ready for next iteration

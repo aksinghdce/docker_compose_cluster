@@ -31,7 +31,7 @@ func TestFsm(t *testing.T) {
     }
     //Run communication test in parallel to do some stress testing
     //Because 
-    go func() {
+     go func() {
         ctx := context.Background()
 	    listenChannel, speakChannel := communication.Comm(ctx, 50000, 50000)
 	    for _, tt := range udpServerTests {
@@ -54,7 +54,7 @@ func TestFsm(t *testing.T) {
 		    }
         }
      done <- true
-    }()
+    }() 
     
     <-done
     
