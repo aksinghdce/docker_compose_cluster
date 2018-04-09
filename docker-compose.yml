@@ -29,6 +29,27 @@ services:
     networks:
       app_net:
         ipv4_address: 172.16.238.5
+  distributedservice5:
+    build: ./distributedservices/.
+    hostname: node4
+    domainname: assignment2
+    networks:
+      app_net:
+        ipv4_address: 172.16.238.6
+  distributedservice6:
+    build: ./distributedservices/.
+    hostname: node4
+    domainname: assignment2
+    networks:
+      app_net:
+        ipv4_address: 172.16.238.7
+  distributedservice7:
+    build: ./distributedservices/.
+    hostname: node4
+    domainname: assignment2
+    networks:
+      app_net:
+        ipv4_address: 172.16.238.8        
 networks:
   app_net:
     driver: bridge
