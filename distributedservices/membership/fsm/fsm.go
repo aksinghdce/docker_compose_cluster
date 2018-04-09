@@ -5,7 +5,6 @@ import (
 	"app/membership/utilities"
 	"fmt"
 	"math/rand"
-	"net"
 	"time"
 )
 
@@ -22,12 +21,6 @@ func Init(initialState int) *Fsm {
 		State: initialState,
 		Mserv: membership.Membership{},
 	}
-	/*
-		Find out the ip address of the leader if this machine
-		is not the leader.
-
-		If you are a leader publish your ip address over multicast
-	*/
 	return instance
 }
 
@@ -39,7 +32,6 @@ func (fsm *Fsm) ProcessFsm() (error, int) {
 		//Forward the request to Membership service
 		//Send Ack back to the peer
 		addreq := ReceiveAddRequest()
-		hbreq := ReceiveHbRequest()
 		ips := utilities.MyIpAddress()
 		if len(ips) <= 0 {
 			fmt.Printf("Error getting ip\n")
@@ -55,31 +47,26 @@ func (fsm *Fsm) ProcessFsm() (error, int) {
 					Seq:    rand.Int63(),
 					Req:    2,
 				}
-			case hbR := <-hbreq:
-				fmt.Printf("Received Hb:%v\n", hbR)
 			}
 		}
 	case fsm.State == 2:
 		/*State 2 is transient state to send ADD request to Leader and Wait for Ack*/
 		//Keep sending "ADD" request to leader
-		done := SendAddReqToLeader()
-		ackChannel := ReceiveAddAcknowledgement()
+		SendAddReqToLeader()
+		ackChannel, _ := ReceiveAddAcknowledgement()
+	LoopState2:
 		for {
+			time.Sleep(100 * time.Millisecond)
 			select {
 			case ack := <-ackChannel:
 				fmt.Printf("ack received:%v\n", ack)
-				done <- true
-				return nil, 3
+				break LoopState2
 			}
 		}
+		return nil, 3
 
 	case fsm.State == 3:
 		fmt.Printf("Moved to state 3\n")
-		stopSendingHb := SendHbReqToIp(net.ParseIP("172.16.238.2"))
-		for i := 0; i < 2; i++ {
-			time.Sleep(1 * time.Second)
-		}
-		stopSendingHb <- true
 	}
 	return nil, fsm.State
 }

@@ -28,7 +28,7 @@ func main() {
 	if err != nil {
 		fmt.Printf("Error:%s\n", err.Error())
 	}
-	fmt.Printf("HOSTNAME:%v\n", host)
+
 	if host == "leader.assignment2" {
 		fsm1 := fsm.Init(1)
 		fsm1.ProcessFsm()
@@ -37,6 +37,7 @@ func main() {
 		err, newState := fsm2.ProcessFsm()
 		if err == nil {
 			fsm2 = fsm.Init(newState)
+
 			fsm2.ProcessFsm()
 		}
 	}

@@ -13,39 +13,40 @@ import (
 
 /*
  */
-func CommSend(ctx context.Context, sendport int) chan utilities.Packet {
+func CommSend(ctx context.Context, sendport int) (chan utilities.Packet, chan bool) {
 	speak := make(chan utilities.Packet)
+	stop_speaking := make(chan bool)
 	//go routine that will speak out to the world at large, whatever it receives
 	//on the second output channel
 	go func() {
-		rerun := false
+		rerun := true
 		for {
 			time.Sleep(10 * time.Millisecond)
-			if rerun == false {
-				rerun = speaker(ctx, speak, sendport)
+			if rerun == true {
+				rerun = speaker(ctx, speak, stop_speaking, sendport)
 			}
 		}
 	}()
 
-	return speak
+	return speak, stop_speaking
 }
 
-func CommReceive(ctx context.Context, receiveport int) chan utilities.Packet {
+func CommReceive(ctx context.Context, receiveport int) (chan utilities.Packet, chan bool) {
 	listen := make(chan utilities.Packet)
-
+	stop := make(chan bool)
 	//go routine that will listen for incoming datagrams and return channel as first
 	//item in the output
 	go func() {
-		rerun := false
+		rerun := true
 		for {
 			time.Sleep(10 * time.Millisecond)
-			if rerun == false {
-				rerun = listener(ctx, listen, receiveport)
+			if rerun == true {
+				rerun = listener(ctx, listen, stop, receiveport)
 			}
 		}
 	}()
 
-	return listen
+	return listen, stop
 }
 
 func Close(c io.Closer) bool {
@@ -59,7 +60,7 @@ func Close(c io.Closer) bool {
 /*
 Will listen on ipv4 ipaddress configured by docker
 */
-func listener(ctx context.Context, listenChannel chan utilities.Packet, port int) bool {
+func listener(ctx context.Context, listenChannel chan utilities.Packet, stop chan bool, port int) bool {
 	ips := utilities.MyIpAddress()
 	if len(ips) <= 0 {
 		fmt.Printf("Error: Local Ip\n")
@@ -72,7 +73,7 @@ func listener(ctx context.Context, listenChannel chan utilities.Packet, port int
 	if err != nil {
 		fmt.Printf("Error in Comm ListenUDP:%v\n", err)
 		log.Log(ctx, err.Error())
-		return false
+		return true
 	}
 	conn.SetReadBuffer(1048576)
 
@@ -81,33 +82,43 @@ func listener(ctx context.Context, listenChannel chan utilities.Packet, port int
 	}()
 
 	for {
-
-		buf := make([]byte, 1024)
-		n, _, err := conn.ReadFromUDP(buf)
-		if err != nil {
-			fmt.Printf("Error in Comm ReadFromUDP:%v\n", err)
-			log.Log(ctx, err.Error())
+		select {
+		case _ = <-stop:
+			Close(conn)
 			return false
+		default:
+			buf := make([]byte, 1024)
+			n, _, err := conn.ReadFromUDP(buf)
+			if err != nil {
+				fmt.Printf("Error in Comm ReadFromUDP:%v\n", err)
+				log.Log(ctx, err.Error())
+				return true
+			}
+			buf = buf[:n]
+			var Result utilities.Packet
+			err = json.Unmarshal(buf, &Result)
+			if err != nil {
+				log.Log(ctx, err.Error())
+				return true
+			}
+			listenChannel <- Result
 		}
-		buf = buf[:n]
-		var Result utilities.Packet
-		err = json.Unmarshal(buf, &Result)
-		if err != nil {
-			log.Log(ctx, err.Error())
-			return false
-		}
-		listenChannel <- Result
 	}
 }
 
-func speaker(ctx context.Context, dialChannel chan utilities.Packet, port int) bool {
+func speaker(ctx context.Context, dialChannel chan utilities.Packet, stop_speaking chan bool, port int) bool {
 	sendThisPacket := <-dialChannel
 	//Might require an error check in the next instruction
+	ips := utilities.MyIpAddress()
+	if len(ips) <= 0 {
+		fmt.Printf("Error: Local Ip\n")
+	}
+	fromAddress := &net.UDPAddr{IP: ips[0]}
 	toAddress := &net.UDPAddr{IP: sendThisPacket.ToIp, Port: port}
-	Conn, err := net.DialUDP("udp", nil, toAddress)
+	Conn, err := net.DialUDP("udp", fromAddress, toAddress)
 	if err != nil {
-		fmt.Printf("Error DialUDP:%s\n", err.Error())
-		return false
+		//fmt.Printf("Error DialUDP:%s\n", err.Error())
+		return true
 	}
 
 	defer func() {
@@ -115,9 +126,11 @@ func speaker(ctx context.Context, dialChannel chan utilities.Packet, port int) b
 	}()
 
 	for {
-
 		timeout := time.After(100 * time.Millisecond)
 		select {
+		case _ = <-stop_speaking:
+			Close(Conn)
+			return false
 		case <-timeout:
 			fmt.Printf("Nothing received from up the stack; retrying\n")
 		default:
@@ -128,7 +141,7 @@ func speaker(ctx context.Context, dialChannel chan utilities.Packet, port int) b
 			_, err = Conn.Write(jsonData)
 			if err != nil {
 				fmt.Printf("Conn.Write:%s\n", err.Error())
-				return false
+				return true
 			}
 			// Be ready for next iteration
 			sendThisPacket = <-dialChannel
