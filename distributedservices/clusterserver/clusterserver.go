@@ -2,17 +2,17 @@ package main
 
 import (
 	"app/log"
-	"app/utilities"
 	"app/membership/fsm"
+	"app/utilities"
 	"context"
 	"fmt"
 	"io/ioutil"
 	"math/rand"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"time"
-	"os"
 )
 
 func main() {
@@ -34,11 +34,11 @@ func main() {
 		fsm1.ProcessFsm()
 	} else {
 		fsm2 := fsm.Init(2)
-    	err, newState := fsm2.ProcessFsm()
-    	if err == nil {
-        	fsm2 = fsm.Init(newState)
-        	fsm2.ProcessFsm()
-    	}
+		err, newState := fsm2.ProcessFsm()
+		if err == nil {
+			fsm2 = fsm.Init(newState)
+			fsm2.ProcessFsm()
+		}
 	}
 
 	/**

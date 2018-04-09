@@ -2,12 +2,14 @@ package fsm
 
 import (
     "testing"
-    "net"
-    "app/membership/utilities"
-    "context"
-    "math/rand"
+    //"net"
+    //"app/membership/utilities"
+    //"context"
+    //"math/rand"
 	"fmt"
-    "app/membership/communication"
+    //"app/membership/communication"
+    //"app/membership/fsm"
+    "os"
 )
 
 var udpServerTests = []struct {
@@ -19,19 +21,34 @@ var udpServerTests = []struct {
 
 
 func TestFsm(t *testing.T) {
-    done := make(chan bool)
-    
-    fsm1 := Init(1)
+    //done := make(chan bool)
+    host, err := os.Hostname()
+	if err != nil {
+		fmt.Printf("Error:%s\n", err.Error())
+	}
+	fmt.Printf("HOSTNAME:%v\n", host)
+	if host == "leader.assignment2" {
+		fsm1 := Init(1)
+		fsm1.ProcessFsm()
+	} else {
+		fsm2 := Init(2)
+    	err, newState := fsm2.ProcessFsm()
+    	if err == nil {
+        	fsm2 = Init(newState)
+        	fsm2.ProcessFsm()
+        }
+    }
+    /* fsm1 := Init(1)
     fsm2 := Init(2)
     fsm1.ProcessFsm()
     err, newState := fsm2.ProcessFsm()
     if err == nil {
         fsm2 = Init(newState)
         fsm2.ProcessFsm()
-    }
+    } */
     //Run communication test in parallel to do some stress testing
     //Because 
-     go func() {
+     /* go func() {
         ctx := context.Background()
 	    listenChannel, speakChannel := communication.Comm(ctx, 50000, 50000)
 	    for _, tt := range udpServerTests {
@@ -57,6 +74,6 @@ func TestFsm(t *testing.T) {
     }() 
     
     <-done
-    
+     */
     t.Log("Well done!")
 }

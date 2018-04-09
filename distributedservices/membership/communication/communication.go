@@ -5,17 +5,34 @@ import (
 	"app/membership/utilities"
 	"context"
 	"encoding/json"
-	"net"
 	"fmt"
-	"time"
 	"io"
+	"net"
+	"time"
 )
 
 /*
-*/
-func Comm(ctx context.Context, receiveport, sendport  int) (chan utilities.Packet, chan utilities.Packet) {
-	listen := make(chan utilities.Packet)
+ */
+func CommSend(ctx context.Context, sendport int) chan utilities.Packet {
 	speak := make(chan utilities.Packet)
+	//go routine that will speak out to the world at large, whatever it receives
+	//on the second output channel
+	go func() {
+		rerun := false
+		for {
+			time.Sleep(10 * time.Millisecond)
+			if rerun == false {
+				rerun = speaker(ctx, speak, sendport)
+			}
+		}
+	}()
+
+	return speak
+}
+
+func CommReceive(ctx context.Context, receiveport int) chan utilities.Packet {
+	listen := make(chan utilities.Packet)
+
 	//go routine that will listen for incoming datagrams and return channel as first
 	//item in the output
 	go func() {
@@ -27,22 +44,11 @@ func Comm(ctx context.Context, receiveport, sendport  int) (chan utilities.Packe
 			}
 		}
 	}()
-	//go routine that will speak out to the world at large, whatever it receives 
-	//on the second output channel
-	go func() {
-		rerun := false
-		for {
-			time.Sleep(10 * time.Millisecond)
-			if rerun == false {
-				rerun = speaker(ctx, speak, sendport)
-			}
-		}
-	}()
-	return listen, speak
+
+	return listen
 }
 
-
-func Close(c io.Closer) bool{
+func Close(c io.Closer) bool {
 	err := c.Close()
 	if err != nil {
 		fmt.Printf("Error in Comm Close:%v\n", err)
@@ -50,14 +56,16 @@ func Close(c io.Closer) bool{
 	return false
 }
 
-func listener(ctx context.Context, listenChannel chan utilities.Packet, port int) bool{
+/*
+Will listen on ipv4 ipaddress configured by docker
+*/
+func listener(ctx context.Context, listenChannel chan utilities.Packet, port int) bool {
 	ips := utilities.MyIpAddress()
 	if len(ips) <= 0 {
-		return false
+		fmt.Printf("Error: Local Ip\n")
 	}
-	fmt.Printf("LISTENING on %s\n", ips[0])
 	myaddr := &net.UDPAddr{
-		IP: ips[0],
+		IP:   ips[0],
 		Port: port,
 	}
 	conn, err := net.ListenUDP("udp", myaddr)
@@ -71,28 +79,28 @@ func listener(ctx context.Context, listenChannel chan utilities.Packet, port int
 	defer func() {
 		Close(conn)
 	}()
+
 	for {
+
 		buf := make([]byte, 1024)
-		fmt.Printf("Trying to Listen\n")
 		n, _, err := conn.ReadFromUDP(buf)
 		if err != nil {
-			fmt.Printf("Error-Conn-ReadFromUDP:%v\n", err)
+			fmt.Printf("Error in Comm ReadFromUDP:%v\n", err)
 			log.Log(ctx, err.Error())
-			continue
+			return false
 		}
 		buf = buf[:n]
 		var Result utilities.Packet
 		err = json.Unmarshal(buf, &Result)
 		if err != nil {
 			log.Log(ctx, err.Error())
-			continue
+			return false
 		}
 		listenChannel <- Result
 	}
-	return true		
 }
 
-func speaker(ctx context.Context, dialChannel chan utilities.Packet, port int) bool{
+func speaker(ctx context.Context, dialChannel chan utilities.Packet, port int) bool {
 	sendThisPacket := <-dialChannel
 	//Might require an error check in the next instruction
 	toAddress := &net.UDPAddr{IP: sendThisPacket.ToIp, Port: port}
@@ -105,11 +113,12 @@ func speaker(ctx context.Context, dialChannel chan utilities.Packet, port int) b
 	defer func() {
 		Close(Conn)
 	}()
-	
-	for {	
+
+	for {
+
 		timeout := time.After(100 * time.Millisecond)
 		select {
-		case <-timeout : 
+		case <-timeout:
 			fmt.Printf("Nothing received from up the stack; retrying\n")
 		default:
 			jsonData, err := json.Marshal(sendThisPacket)
@@ -118,12 +127,11 @@ func speaker(ctx context.Context, dialChannel chan utilities.Packet, port int) b
 			}
 			_, err = Conn.Write(jsonData)
 			if err != nil {
-				fmt.Printf("Conn.Write:%v\n", err)
+				fmt.Printf("Conn.Write:%s\n", err.Error())
 				return false
 			}
 			// Be ready for next iteration
 			sendThisPacket = <-dialChannel
 		}
 	}
-	return true
 }
