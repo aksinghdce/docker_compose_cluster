@@ -6,7 +6,6 @@ import (
 	"app/membership/communication"
 	"app/membership/utilities"
 	"context"
-	"errors"
 	"fmt"
 	"math/rand"
 	"net"
@@ -35,6 +34,40 @@ func Init(initialState int) *Fsm {
 	return instance
 }
 
+func SendAddReqToLeader() chan bool {
+	//command to stop sending ADD req
+	ctx := context.Background()
+	// a control to stop sending ADD request to Leader
+	done := make(chan bool)
+	speakChannel := communication.CommSend(ctx, 50000)
+	go func() {
+		ips := utilities.MyIpAddress()
+		if len(ips) <= 0 {
+			fmt.Printf("Error getting ip\n")
+			return
+		}
+		for {
+			select {
+			case stop := <-done:
+				if stop == true {
+					fmt.Printf("Stopping to send ADD\n")
+					return
+				}
+			default:
+				//fmt.Printf("Sending ADD req to LEADER\n")
+				speakChannel <- utilities.Packet{
+					FromIp: ips[0],
+					ToIp:   net.ParseIP("172.16.238.2"),
+					Seq:    rand.Int63(),
+					Req:    1,
+				}
+			}
+
+		}
+	}()
+	return done
+}
+
 func SendAcknowledgement() chan utilities.Packet {
 	//send what we receive on this channel
 	ctx := context.Background()
@@ -44,12 +77,11 @@ func SendAcknowledgement() chan utilities.Packet {
 		for {
 			select {
 			case toBeSent := <-sendFromThisChan:
-				fmt.Printf("Sending Ack to %v, req:%d\n", toBeSent.ToIp, toBeSent.Req)
+				//fmt.Printf("Sending Ack to %v, req:%d\n", toBeSent.ToIp, toBeSent.Req)
 				speakChannel <- toBeSent
 			}
 		}
 	}()
-
 	return sendFromThisChan
 }
 
@@ -57,7 +89,6 @@ func ReceiveAddRequest() chan utilities.Packet {
 	addRequestChannel := make(chan utilities.Packet)
 	ctx := context.Background()
 	listenChannel := communication.CommReceive(ctx, 50000)
-	//speakChannel := communication.CommSend(ctx, 50000)
 	go func() {
 	TheForLoopState1:
 		for {
@@ -70,22 +101,12 @@ func ReceiveAddRequest() chan utilities.Packet {
 						fmt.Printf("Error getting ip\n")
 					}
 					addRequestChannel <- receivedHbPacket
-					/* speakChannel <- utilities.Packet{
-						FromIp: ips[0],
-						ToIp:   receivedHbPacket.FromIp,
-						Seq:    rand.Int63(),
-						Req:    2,
-					} */
 					continue TheForLoopState1
 				}
-			case <-time.After(100 * time.Millisecond):
-				continue TheForLoopState1
 			}
 		}
 	}()
-
 	return addRequestChannel
-
 }
 
 func ReceiveAddAcknowledgement() chan utilities.Packet {
@@ -104,22 +125,12 @@ func ReceiveAddAcknowledgement() chan utilities.Packet {
 						fmt.Printf("Error getting ip\n")
 					}
 					addAckChannel <- receivedHbPacket
-					/* speakChannel <- utilities.Packet{
-						FromIp: ips[0],
-						ToIp:   receivedHbPacket.FromIp,
-						Seq:    rand.Int63(),
-						Req:    2,
-					} */
 					continue TheForLoopState1
 				}
-			case <-time.After(100 * time.Millisecond):
-				continue TheForLoopState1
 			}
 		}
 	}()
-
 	return addAckChannel
-
 }
 
 func (fsm *Fsm) ProcessFsm() (error, int) {
@@ -130,15 +141,15 @@ func (fsm *Fsm) ProcessFsm() (error, int) {
 		//Forward the request to Membership service
 		//Send Ack back to the peer
 		addreq := ReceiveAddRequest()
-		ackres := SendAcknowledgement()
+		ips := utilities.MyIpAddress()
+		if len(ips) <= 0 {
+			fmt.Printf("Error getting ip\n")
+		}
 		for {
 			select {
 			case addR := <-addreq:
-				fmt.Printf("Received %v\n", addR)
-				ips := utilities.MyIpAddress()
-				if len(ips) <= 0 {
-					fmt.Printf("Error getting ip\n")
-				}
+				//fmt.Printf("Received %v\n", addR)
+				ackres := SendAcknowledgement()
 				ackres <- utilities.Packet{
 					FromIp: ips[0],
 					ToIp:   addR.FromIp,
@@ -149,27 +160,15 @@ func (fsm *Fsm) ProcessFsm() (error, int) {
 		}
 	case fsm.State == 2:
 		/*State 2 is transient state to send ADD request to Leader and Wait for Ack*/
-		ctx := context.Background()
+		//Keep sending "ADD" request to leader
+		done := SendAddReqToLeader()
 		ackChannel := ReceiveAddAcknowledgement()
-		speakChannel := communication.CommSend(ctx, 50000)
 		for {
 			select {
-			case ackPacket := <-ackChannel:
-				fmt.Printf("Received ACK in STATE 2%v\n", ackPacket)
-				/*Send ADD event to Membership.go*/
-				/*Move to state 3*/
+			case ack := <-ackChannel:
+				fmt.Printf("ack received:%v\n", ack)
+				done <- true
 				return nil, 3
-			default:
-				ips := utilities.MyIpAddress()
-				if len(ips) <= 0 {
-					return errors.New("Error accessing local ip address"), 2
-				}
-				speakChannel <- utilities.Packet{
-					FromIp: ips[0],
-					ToIp:   net.ParseIP("172.16.238.2"),
-					Seq:    rand.Int63(),
-					Req:    1,
-				}
 			}
 		}
 
