@@ -49,10 +49,9 @@ func SendAddReqToLeader() chan bool {
 
 func SendHbReqToIp(ip net.IP) chan bool {
 	//command to stop sending ADD req
-	ctx := context.Background()
 	// a control to stop sending ADD request to Leader
 	done := make(chan bool)
-	speakChannel, stop_speaking := communication.CommSend(ctx, 50001)
+	channel := communication.GetComm()("send", 50001)
 	go func() {
 		ips := utilities.MyIpAddress()
 		if len(ips) <= 0 {
@@ -67,11 +66,11 @@ func SendHbReqToIp(ip net.IP) chan bool {
 			case stop := <-done:
 				if stop == true {
 					fmt.Printf("Stopping to send HB\n")
-					stop_speaking <- true
+					channel.ControlC <- true
 					break TheForLoopSendHB
 				}
 			default:
-				speakChannel <- utilities.Packet{
+				channel.DataC <- utilities.Packet{
 					FromIp: ips[0],
 					ToIp:   ip,
 					Seq:    rand.Int63(),
@@ -86,17 +85,16 @@ func SendHbReqToIp(ip net.IP) chan bool {
 
 func SendAcknowledgement() chan utilities.Packet {
 	//send what we receive on this channel
-	ctx := context.Background()
 	sendFromThisChan := make(chan utilities.Packet)
-	speakChannel, stop_speaking := communication.CommSend(ctx, 50001)
+	channel := communication.GetComm()("send", 50001)
 	go func() {
 	LoopSendAck:
 		for {
 			select {
 			case toBeSent := <-sendFromThisChan:
-				speakChannel <- toBeSent
+				channel.DataC <- toBeSent
 				time.Sleep(time.Second)
-				stop_speaking <- true
+				channel.ControlC <- true
 				break LoopSendAck
 			}
 		}
@@ -107,15 +105,13 @@ func SendAcknowledgement() chan utilities.Packet {
 
 func ReceiveAddRequest() chan utilities.Packet {
 	addRequestChannel := make(chan utilities.Packet)
-	ctx := context.Background()
-	listenChannel, _ := communication.CommReceive(ctx, 50000)
+	channel := communication.GetComm()("receive", 50000)
 	go func() {
 	TheForLoopState1:
 		for {
 			select {
-			case receivedHbPacket := <-listenChannel:
+			case receivedHbPacket := <-channel.DataC:
 				if receivedHbPacket.Req == 1 {
-					log.Log(ctx, fmt.Sprintf("Received ADD request from IP:%s\n", receivedHbPacket.FromIp.String()))
 					ips := utilities.MyIpAddress()
 					if len(ips) <= 0 {
 						fmt.Printf("Error getting ip\n")
@@ -132,12 +128,12 @@ func ReceiveAddRequest() chan utilities.Packet {
 func ReceiveHbRequest() chan utilities.Packet {
 	hbRequestChannel := make(chan utilities.Packet)
 	ctx := context.Background()
-	listenChannel, _ := communication.CommReceive(ctx, 50001)
+	channel := communication.GetComm()("receive", 50001)
 	go func() {
 	TheForLoopState1:
 		for {
 			select {
-			case receivedHbPacket := <-listenChannel:
+			case receivedHbPacket := <-channel.DataC:
 				if receivedHbPacket.Req == 3 {
 					log.Log(ctx, fmt.Sprintf("Received Hb request from IP:%s\n", receivedHbPacket.FromIp.String()))
 					ips := utilities.MyIpAddress()
@@ -157,12 +153,12 @@ func ReceiveAddAcknowledgement() (chan utilities.Packet, chan bool) {
 	addAckChannel := make(chan utilities.Packet)
 	stop := make(chan bool)
 	ctx := context.Background()
-	listenChannel, over := communication.CommReceive(ctx, 50001)
+	channel := communication.GetComm()("receive", 50001)
 	go func() {
 	TheForLoopState1:
 		for {
 			select {
-			case receivedHbPacket := <-listenChannel:
+			case receivedHbPacket := <-channel.DataC:
 				if receivedHbPacket.Req == 2 {
 					log.Log(ctx, fmt.Sprintf("Received ACK from IP:%s\n", receivedHbPacket.FromIp.String()))
 					ips := utilities.MyIpAddress()
@@ -173,7 +169,7 @@ func ReceiveAddAcknowledgement() (chan utilities.Packet, chan bool) {
 					continue TheForLoopState1
 				}
 			case _ = <-stop:
-				over <- true
+				channel.ControlC <- true
 				break TheForLoopState1
 			}
 		}
