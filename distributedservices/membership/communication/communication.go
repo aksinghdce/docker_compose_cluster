@@ -11,6 +11,45 @@ import (
 	"time"
 )
 
+type Channels struct {
+	DataC    chan utilities.Packet
+	ControlC chan bool
+}
+
+func GetComm() func(string, int) Channels {
+	commMap := make(map[string]Channels)
+
+	f := func(sendorreceive string, port int) Channels {
+		var ch Channels
+		key_ := sendorreceive + string(port)
+		_, ok := commMap[key_]
+		if !ok {
+			if sendorreceive == "send" {
+				ctx := context.Background()
+				data, control := CommSend(ctx, port)
+				commMap[key_] = Channels{
+					DataC:    data,
+					ControlC: control,
+				}
+				ch = commMap[key_]
+			} else if sendorreceive == "receive" {
+				ctx := context.Background()
+				data, control := CommReceive(ctx, port)
+				commMap[key_] = Channels{
+					DataC:    data,
+					ControlC: control,
+				}
+				ch = commMap[key_]
+			}
+		} else {
+			ch = commMap[key_]
+		}
+		return ch
+	}
+
+	return f
+}
+
 /*
  */
 func CommSend(ctx context.Context, sendport int) (chan utilities.Packet, chan bool) {
@@ -33,7 +72,7 @@ func CommSend(ctx context.Context, sendport int) (chan utilities.Packet, chan bo
 
 func CommReceive(ctx context.Context, receiveport int) (chan utilities.Packet, chan bool) {
 	listen := make(chan utilities.Packet)
-	stop := make(chan bool)
+	stop_listening := make(chan bool)
 	//go routine that will listen for incoming datagrams and return channel as first
 	//item in the output
 	go func() {
@@ -41,12 +80,12 @@ func CommReceive(ctx context.Context, receiveport int) (chan utilities.Packet, c
 		for {
 			time.Sleep(10 * time.Millisecond)
 			if rerun == true {
-				rerun = listener(ctx, listen, stop, receiveport)
+				rerun = listener(ctx, listen, stop_listening, receiveport)
 			}
 		}
 	}()
 
-	return listen, stop
+	return listen, stop_listening
 }
 
 func Close(c io.Closer) bool {

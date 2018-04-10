@@ -13,10 +13,10 @@ import (
 
 func SendAddReqToLeader() chan bool {
 	//command to stop sending ADD req
-	ctx := context.Background()
+
 	// a control to stop sending ADD request to Leader
 	done := make(chan bool)
-	speakChannel, stop_speaking := communication.CommSend(ctx, 50000)
+	channel := communication.GetComm()("send", 50000)
 	go func() {
 		ips := utilities.MyIpAddress()
 		if len(ips) <= 0 {
@@ -29,12 +29,12 @@ func SendAddReqToLeader() chan bool {
 			case stop := <-done:
 				if stop == true {
 					fmt.Printf("Stopping to send ADD\n")
-					stop_speaking <- true
+					channel.ControlC <- true
 					break TheForLoopSendAdd
 				}
 			default:
 				//fmt.Printf("Sending ADD req to LEADER\n")
-				speakChannel <- utilities.Packet{
+				channel.DataC <- utilities.Packet{
 					FromIp: ips[0],
 					ToIp:   net.ParseIP("172.16.238.2"),
 					Seq:    rand.Int63(),
