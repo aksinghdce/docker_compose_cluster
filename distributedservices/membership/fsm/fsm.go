@@ -68,17 +68,17 @@ func (fsm *Fsm) ProcessFsm() (error, int) {
 				}
 			}
 		}
-		return nil, 3
 
-	case fsm.State == 3:
-		fmt.Printf("Moved to state 3\n")
+		/*Regular heartbeat begin here*/
+
+		fmt.Printf("Regular heartbeats begin\n")
 		ips := utilities.MyIpAddress()
 		if len(ips) <= 0 {
 			fmt.Printf("Error getting ip\n")
 			return nil, fsm.State
 		}
 		channelS := communication.GetComm()("send", 50002)
-		channelR := communication.GetComm()("receive", 50002)
+
 		go func() {
 			for {
 				time.Sleep(100 * time.Millisecond)
@@ -94,7 +94,7 @@ func (fsm *Fsm) ProcessFsm() (error, int) {
 		go func() {
 			for {
 				select {
-				case hbR := <-channelR.DataC:
+				case hbR := <-channel.DataC:
 					fmt.Printf("Received %v\n", hbR)
 				}
 			}
