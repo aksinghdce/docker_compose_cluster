@@ -4,6 +4,7 @@ import (
 	"app/membership"
 	"app/membership/communication"
 	"app/membership/utilities"
+	"errors"
 	"fmt"
 	"math/rand"
 	"net"
@@ -12,6 +13,7 @@ import (
 
 /*This module is responsible for managing heartbeats
  */
+const HeartBeatInterval = 2 * time.Second
 
 type Fsm struct {
 	State int
@@ -26,14 +28,13 @@ func Init(initialState int) *Fsm {
 	return instance
 }
 
-func (fsm *Fsm) ProcessFsm() (error, int) {
+func (fsm *Fsm) ProcessFsm() error {
 
 	switch {
 	case fsm.State == 1:
 		//Listen for "ADD" requests from peers
-		//Forward the request to Membership service
-		//Send Ack back to the peer
 		addreq := ReceiveAddRequest()
+
 		ips := utilities.MyIpAddress()
 		if len(ips) <= 0 {
 			fmt.Printf("Error getting ip\n")
@@ -41,7 +42,7 @@ func (fsm *Fsm) ProcessFsm() (error, int) {
 		for {
 			select {
 			case addR := <-addreq:
-				//fmt.Printf("Received %v\n", addR)
+				//Send Ack back to the peer
 				ackres := SendAcknowledgement()
 				ackres <- utilities.Packet{
 					FromIp: ips[0],
@@ -52,7 +53,8 @@ func (fsm *Fsm) ProcessFsm() (error, int) {
 			}
 		}
 	case fsm.State == 2:
-		/*State 2 is transient state to send ADD request to Leader and Wait for Ack*/
+		/*State 2 is a state for non-leader node
+		send ADD request to Leader and Wait for Ack*/
 		//Keep sending "ADD" request to leader
 		SendAddReqToLeader()
 		channel := communication.GetComm()("receive", 50001)
@@ -63,7 +65,10 @@ func (fsm *Fsm) ProcessFsm() (error, int) {
 			case ack := <-channel.DataC:
 				if ack.Req == 2 {
 					fmt.Printf("ack received:%v\n", ack)
+					// ask SendAddReqToLeader() generator to stop sending
+					// ADD req.
 					//channel.ControlC <- true
+					//Fix it later: SendAddReqToLeader is still sending ADD req
 					break LoopState2
 				}
 			}
@@ -74,14 +79,13 @@ func (fsm *Fsm) ProcessFsm() (error, int) {
 		fmt.Printf("Regular heartbeats begin\n")
 		ips := utilities.MyIpAddress()
 		if len(ips) <= 0 {
-			fmt.Printf("Error getting ip\n")
-			return nil, fsm.State
+			return errors.New("Can't get IP address\n")
 		}
 		channelS := communication.GetComm()("send", 50002)
 
 		go func() {
 			for {
-				time.Sleep(100 * time.Millisecond)
+				time.Sleep(HeartBeatInterval)
 				channelS.DataC <- utilities.Packet{
 					FromIp: ips[0],
 					ToIp:   net.ParseIP("172.16.238.6"),
@@ -100,5 +104,5 @@ func (fsm *Fsm) ProcessFsm() (error, int) {
 			}
 		}()
 	}
-	return nil, fsm.State
+	return errors.New("Shouldn't have returned from here\n")
 }

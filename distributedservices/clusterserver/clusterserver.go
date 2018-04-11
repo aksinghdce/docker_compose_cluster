@@ -34,11 +34,10 @@ func main() {
 		fsm1.ProcessFsm()
 	} else {
 		fsm2 := fsm.Init(2)
-		err, newState := fsm2.ProcessFsm()
+		err := fsm2.ProcessFsm()
 		if err == nil {
-			fsm2 = fsm.Init(newState)
-
-			fsm2.ProcessFsm()
+			fmt.Printf("Problem in FSM\n")
+			os.Exit(1)
 		}
 	}
 
