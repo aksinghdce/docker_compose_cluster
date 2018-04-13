@@ -1,16 +1,16 @@
 package membership
 
 import (
-	"container/list"
 	"app/membership/utilities"
+	"container/list"
 	"fmt"
-	"net"
 	"math/rand"
+	"net"
 )
 
 /*
 1. This structure will just have one state that it has to maintain
-consistent. 
+consistent.
 
 2. Heartbeat can be calculated from a consistent state
 only.
@@ -19,14 +19,14 @@ only.
 can call, this method will exclusively be present in this file for
 maintainability.
 */
-type Membership struct{
-	chanOut chan utilities.Packet
-	chanIn chan utilities.Packet
-	ring list.List
+type Membership struct {
+	ChanOut chan utilities.Packet
+	ChanIn  chan utilities.Packet
+	Ring    list.List
 }
 
 /*
-Membership Service is invoked by fsm 
+Membership Service is invoked by fsm
 KeepMembershipUpdated will expect events
 coming on an incoming channel from fsm engine
 
@@ -36,27 +36,27 @@ service will send it on outgoing channel.
 func (m *Membership) KeepMembershipUpdated() (chan utilities.Packet, chan utilities.Packet) {
 	packet := utilities.Packet{
 		FromIp: net.ParseIP("127.0.0.1"),
-		ToIp: net.ParseIP("127.0.0.2"),
-		Seq: rand.Int63(),
+		ToIp:   net.ParseIP("127.0.0.2"),
+		Seq:    rand.Int63(),
 	}
-	
+
 	go func() {
 		/*This go routine will listen for incoming packet.
 		If the incoming packet is an "ADD" request, it will update the extended ring
 		If the incoming packet is a "REMOVE" request, it will update the extended ring
 		If the incoming packet denotes heartbeat miss, then it will update the extended ring
-		
+
 		After updating the ring, it will send heartbeat messages to a subset of nodes in the
 		extended ring*/
 		for {
 			select {
-			case receivedEvent := <-m.chanIn:
-				fmt.Printf("Received:%v\n", receivedEvent)
-				m.chanOut <- packet
+			case receivedEvent := <-m.ChanIn:
+				fmt.Printf("Received at Membership:%v\n", receivedEvent)
+				m.ChanOut <- packet
 			}
 		}
 	}()
-	return m.chanOut, m.chanIn
+	return m.ChanOut, m.ChanIn
 }
 
 func (m *Membership) Insert(key string, value interface{}) bool {

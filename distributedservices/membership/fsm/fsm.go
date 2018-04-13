@@ -23,13 +23,17 @@ type Fsm struct {
 func Init(initialState int) *Fsm {
 	instance := &Fsm{
 		State: initialState,
-		Mserv: membership.Membership{},
+		Mserv: membership.Membership{
+			ChanOut: make(chan utilities.Packet),
+			ChanIn:  make(chan utilities.Packet),
+		},
 	}
+
 	return instance
 }
 
 func (fsm *Fsm) ProcessFsm() error {
-
+	ChanRm, ChanSm := fsm.Mserv.KeepMembershipUpdated()
 	switch {
 	case fsm.State == 1:
 		//Listen for "ADD" requests from peers
@@ -50,6 +54,10 @@ func (fsm *Fsm) ProcessFsm() error {
 					Seq:    rand.Int63(),
 					Req:    2,
 				}
+				fmt.Printf("Received ADD request\n")
+				ChanSm <- addR
+			case recvM := <-ChanRm:
+				fmt.Printf("Membership to fsm:%v\n", recvM)
 			}
 		}
 	case fsm.State == 2:
@@ -69,6 +77,7 @@ func (fsm *Fsm) ProcessFsm() error {
 					// ADD req.
 					//channel.ControlC <- true
 					//Fix it later: SendAddReqToLeader is still sending ADD req
+					//stop <- true
 					break LoopState2
 				}
 			}
@@ -81,14 +90,14 @@ func (fsm *Fsm) ProcessFsm() error {
 		if len(ips) <= 0 {
 			return errors.New("Can't get IP address\n")
 		}
-		channelS := communication.GetComm()("send", 50002)
+		channelS := communication.GetComm()("send", 50001)
 
 		go func() {
 			for {
 				time.Sleep(HeartBeatInterval)
 				channelS.DataC <- utilities.Packet{
 					FromIp: ips[0],
-					ToIp:   net.ParseIP("172.16.238.6"),
+					ToIp:   net.ParseIP("172.16.238.4"),
 					Seq:    rand.Int63(),
 					Req:    3,
 				}
@@ -100,6 +109,7 @@ func (fsm *Fsm) ProcessFsm() error {
 				select {
 				case hbR := <-channel.DataC:
 					fmt.Printf("Received %v\n", hbR)
+					time.Sleep(10 * time.Millisecond)
 				}
 			}
 		}()
