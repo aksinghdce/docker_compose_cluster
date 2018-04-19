@@ -2,7 +2,6 @@ package communication
 
 import (
 	"app/membership/utilities"
-	"context"
 	"fmt"
 	"math/rand"
 	"net"
@@ -49,9 +48,9 @@ var udpServerTests = []struct {
 	   {snet: "udp6", saddr: "[::]:0", tnet: "udp6", taddr: "::1"},
 	   {snet: "udp6", saddr: "[::1]:0", tnet: "udp6", taddr: "::1"}, */
 	{snet: "udp6", saddr: "172.16.238.2", tnet: "udp6", taddr: "::1"},
-	{snet: "udp6", saddr: "172.16.238.3", tnet: "udp6", taddr: "::1"},
+	/* {snet: "udp6", saddr: "172.16.238.3", tnet: "udp6", taddr: "::1"},
 	{snet: "udp6", saddr: "172.16.238.4", tnet: "udp6", taddr: "::1"},
-	{snet: "udp6", saddr: "172.16.238.5", tnet: "udp6", taddr: "::1"},
+	{snet: "udp6", saddr: "172.16.238.5", tnet: "udp6", taddr: "::1"}, */
 }
 
 func TestUDPServer(t *testing.T) {
@@ -61,9 +60,8 @@ func TestUDPServer(t *testing.T) {
 	}
 	fmt.Printf("Ip:%v\n", Ips[0])
 
-	ctx := context.Background()
-	listenChannel := CommReceive(ctx, 50000)
-	speakChannel := CommSend(ctx, 50000)
+	listenChannel := GetComm2()("receive", 50000)
+	speakChannel := GetComm2()("send", 50000)
 	for caseNumber, tt := range udpServerTests {
 		fmt.Printf("Running Test Number:%d\n", caseNumber)
 		packet := utilities.Packet{
@@ -71,17 +69,19 @@ func TestUDPServer(t *testing.T) {
 			ToIp:   net.ParseIP(tt.saddr),
 			Seq:    rand.Int63(),
 		}
-		var receivedPacket utilities.Packet
-		for i := 0; i < 5; i++ {
-			//Sending test packet
-			speakChannel <- packet
-			timeout := time.After(10 * time.Second)
+
+		for {
+			timeout := time.After(2 * time.Second)
 			select {
-			//Receiving test packet
-			case receivedPacket = <-listenChannel:
-				fmt.Printf("Packet:%v received\n", receivedPacket)
+			//Sending/Receiving test packet
+			case received_something:= <-listenChannel:
+				
+					fmt.Printf("-%v-", received_something)
+				
 			case <-timeout:
-				t.Fatal("Packet not received in 10 second")
+				packet.Seq = rand.Int63()
+				speakChannel <- packet
+				
 			}
 		}
 	}
