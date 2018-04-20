@@ -40,9 +40,9 @@ func (fsm *Fsm) ProcessFsm() error {
 					fmt.Printf("Recovered in ProcessFsm STATE 1:%v !!", r)
 				}
 			}()
-			addreq_data_control := communication.GetComm2()("receive", 50000)
 		ADD_Loop:
 			for {
+				addreq_data_control := communication.GetComm2()("receive", 50000)
 				time.Sleep(1 * time.Second)
 				//addreq is a channel on which ADD requests from peer are received
 				ips := utilities.MyIpAddress()

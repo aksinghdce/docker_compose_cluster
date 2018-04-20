@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
+	"os"
 )
 
 type Channels2 struct {
@@ -13,6 +14,13 @@ type Channels2 struct {
 	ControlC chan string
 }
 
+/*
+Returns a function
+	 which returns a Channel2 object
+Uses:
+	1. Caller can parameterize the returned function for a "send" or "receive"
+	communication. And the port for udp communication only.
+*/
 func GetComm2() func(string, int) Channels2 {
 	f := func(sendorreceive string, port int) Channels2 {
 		var dataAndControl Channels2
@@ -52,33 +60,44 @@ func commSend2(ctx context.Context, sendport int) Channels2 {
 		}
 
 		defer func() {
-			fmt.Printf("commSend2:CLOSING CONNECTION\n")
-			close(dataAndControl.DataC)
-			Conn.Close()
+			if r := recover(); r != nil {
+				fmt.Printf("Recovered in ProcessFsm STATE 1:%v !!", r)
+				fmt.Printf("commSend2:CLOSING CONNECTION\n")
+				close(dataAndControl.DataC)
+				err := Conn.Close()
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "Error closing connection\n")
+				}
+				dataAndControl.ControlC <- "Yes Sir!"
+			}
 		}()
-
-	sender_loop:
+	send_loop:
 		for {
 			select {
-			case data := <-dataAndControl.DataC:
+			case data, ok := <-dataAndControl.DataC:
+				if !ok {
+					fmt.Printf("Channel is closed\n")
+					return
+				}
+				if data.Req == 2 {
+					fmt.Printf("Sending back ACK%v\n", data)
+				}
+
 				jsonData, err := json.Marshal(data)
 				if err != nil {
 					fmt.Printf("Error:%v\n", err.Error())
-					continue sender_loop
+					panic("Can't marshall data\n")
 				}
 				_, err = Conn.Write(jsonData)
 				if err != nil {
 					fmt.Printf("Conn.Write:%s\n", err.Error())
-					break sender_loop
+					//panic("Can't write on Connection\n")
+					break send_loop
 				}
 			case <-dataAndControl.ControlC:
-				fmt.Printf("commSend2:CLOSING CONNECTION\n")
-				close(dataAndControl.DataC)
-				Conn.Close()
-				dataAndControl.ControlC <- "Yes Sir!"
+				panic("closing everything\n")
 			}
 		}
-		return
 	}()
 
 	return dataAndControl
@@ -106,7 +125,7 @@ func commReceive2(ctx context.Context, sendport int) Channels2 {
 		}
 		conn, err := net.ListenUDP("udp", myaddr)
 		if err != nil {
-			fmt.Printf("Error in Comm ListenUDP:%v\n", err)
+			//fmt.Printf("Error in Comm ListenUDP:%v\n", err)
 			return
 		}
 		defer func() {
@@ -133,9 +152,12 @@ func commReceive2(ctx context.Context, sendport int) Channels2 {
 
 			select {
 			case <-close_connection:
-				close(dataAndControl.DataC)
-				conn.Close()
+				err := conn.Close()
+				if err != nil {
+					fmt.Printf("There was an error closing the connection\n")
+				}
 				close_connection <- "Done closing!"
+				return
 			case peer_sent_this <- Result:
 				fmt.Printf("Data sent UP\n")
 			}
@@ -147,11 +169,13 @@ func commReceive2(ctx context.Context, sendport int) Channels2 {
 			select {
 			case data := <-peer_sent_this:
 				fmt.Printf("Data from peer:%v\n", data)
+				dataAndControl.DataC <- data
 			case <-dataAndControl.ControlC:
 				fmt.Printf("RECEIVED REQUEST TO CLOSE CONNECTION\n")
 				close_connection <- "close connection immediately"
 				fmt.Printf("closed okay?:%v\n", <-close_connection)
 				dataAndControl.ControlC <- "Okay done!"
+				return
 			}
 		}
 	}()

@@ -35,6 +35,7 @@ func SendAddReqToLeader() chan string {
 				Seq:    rand.Int63(),
 				Req:    1,
 			}:
+
 			case <-stop_sending_add_req:
 				data_and_control.ControlC <- "Stop sending ADD"
 				fmt.Printf("Have you stopped:%v\n", <-data_and_control.ControlC)
