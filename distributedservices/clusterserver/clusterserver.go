@@ -2,7 +2,7 @@ package main
 
 import (
 	"app/log"
-	"app/membership/fsm"
+	//"app/membership/fsm"
 	"app/utilities"
 	"context"
 	"fmt"
@@ -24,7 +24,7 @@ func main() {
 	startTime := time.Now()
 	log.Log(Context, startTime.String())
 
-	host, err := os.Hostname()
+	/* host, err := os.Hostname()
 	if err != nil {
 		fmt.Printf("Error:%s\n", err.Error())
 	}
@@ -39,7 +39,7 @@ func main() {
 			fmt.Printf("Problem in FSM\n")
 			os.Exit(1)
 		}
-	}
+	} */
 
 	/**
 	1. Get a grep request from peer, parse it

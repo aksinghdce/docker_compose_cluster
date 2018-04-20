@@ -31,10 +31,9 @@ func TestFsm(t *testing.T) {
 		fsm1.ProcessFsm()
 	} else {
 		fsm2 := Init(2)
-		err, newState := fsm2.ProcessFsm()
-		if err == nil {
-			fsm2 = Init(newState)
-			fsm2.ProcessFsm()
+		err := fsm2.ProcessFsm()
+		if err != nil {
+			t.Fatalf("ProcessFsm exited with error:%v\n", err)
 		}
 	}
 
